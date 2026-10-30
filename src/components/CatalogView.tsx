@@ -39,11 +39,13 @@ interface CatalogViewProps {
   showTerms: boolean;
   setShowTerms: (val: boolean) => void;
   startDate: string;
+  minDate?: string;
   setStartDate: (val: string) => void;
   durationDays: number;
   setDurationDays: (val: number) => void;
   durationOptions: DurationOption[];
   currentDurationObj: DurationOption;
+  availabilityMap?: Record<string, number>;
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   selectedCategory: string;
@@ -75,11 +77,13 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   showTerms,
   setShowTerms,
   startDate,
+  minDate,
   setStartDate,
   durationDays,
   setDurationDays,
   durationOptions,
   currentDurationObj,
+  availabilityMap,
   searchQuery,
   setSearchQuery,
   selectedCategory,
@@ -237,6 +241,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             </label>
             <input
               type="date"
+              min={minDate}
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -302,9 +307,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           </div>
         ) : (
           filteredItems.map((item) => {
-            const isAvailable = item.status === 'available' && item.stock > 0;
+            const effectiveStock =
+              availabilityMap && typeof availabilityMap[item.id] === 'number'
+                ? availabilityMap[item.id]
+                : item.status === 'available'
+                ? item.stock
+                : 0;
+            const isAvailable = item.status !== 'maintenance' && effectiveStock > 0;
             const isRented =
-              item.status === 'rented' || (item.status === 'available' && item.stock === 0);
+              item.status === 'rented' ||
+              (item.status === 'available' && effectiveStock === 0);
             const calculatedPrice = item.pricePerDay * currentDurationObj.multiplier;
             const inCartQty = cart[item.id] || 0;
 
@@ -348,7 +360,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                       {isAvailable && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          TERSEDIA ({item.stock} unit)
+                          TERSEDIA ({effectiveStock} unit)
                         </span>
                       )}
                       {isRented && (
@@ -412,7 +424,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   {isAvailable ? (
                     inCartQty === 0 ? (
                       <button
-                        onClick={() => onUpdateCartQty(item.id, 1, item.stock)}
+                        onClick={() => onUpdateCartQty(item.id, 1, effectiveStock)}
                         className="bg-slate-900 hover:bg-emerald-600 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -421,7 +433,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     ) : (
                       <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-300 rounded-xl p-1">
                         <button
-                          onClick={() => onUpdateCartQty(item.id, -1, item.stock)}
+                          onClick={() => onUpdateCartQty(item.id, -1, effectiveStock)}
                           className="w-7 h-7 rounded-lg bg-white text-slate-700 hover:bg-slate-100 flex items-center justify-center shadow-sm"
                         >
                           <Minus className="w-3.5 h-3.5" />
@@ -430,7 +442,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                           {inCartQty}
                         </span>
                         <button
-                          onClick={() => onUpdateCartQty(item.id, 1, item.stock)}
+                          onClick={() => onUpdateCartQty(item.id, 1, effectiveStock)}
                           className="w-7 h-7 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center shadow-sm"
                         >
                           <Plus className="w-3.5 h-3.5" />

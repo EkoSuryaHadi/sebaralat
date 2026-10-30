@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Upload, X, Link2, Loader2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Upload, X, Link2, Loader2, PlusCircle, AlertCircle } from 'lucide-react';
 import { uploadItemImage } from '@/lib/imageUtils';
 
 export interface NewItemFormState {
@@ -20,7 +20,7 @@ interface AddItemModalProps {
   onClose: () => void;
   form: NewItemFormState;
   setForm: React.Dispatch<React.SetStateAction<NewItemFormState>>;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (formData: NewItemFormState) => Promise<void> | void;
   categories?: string[];
   shopSlug?: string;
 }
@@ -39,35 +39,14 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isUrlMode, setIsUrlMode] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Sinkronisasi HANYA saat modal dibuka / ditutup (tidak mereset saat pengguna mengetik)
-  useEffect(() => {
-    if (isOpen) {
-      const currentCat = form.category?.trim();
-      if (currentCat && !categories.includes(currentCat)) {
-        setIsCustomCategory(true);
-        setCustomCategoryInput(currentCat);
-      } else {
-        setIsCustomCategory(false);
-        setCustomCategoryInput('');
-        if (!form.category && categories.length > 0) {
-          setForm((prev) => ({ ...prev, category: categories[0] }));
-        }
-      }
-      setIsUrlMode(false);
-      setUrlInput(form.imageUrl || '');
-    } else {
-      setIsCustomCategory(false);
-      setCustomCategoryInput('');
-      setIsUploading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleToggleCustom = () => {
+    setFormError('');
     if (isCustomCategory) {
       setIsCustomCategory(false);
       const defaultCat = categories[0] || 'Camping';
@@ -81,6 +60,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   };
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormError('');
     const val = e.target.value;
     if (val === '__NEW__') {
       setIsCustomCategory(true);
@@ -92,6 +72,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   };
 
   const handleCustomInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormError('');
     const val = e.target.value;
     setCustomCategoryInput(val);
     setForm((prev) => ({ ...prev, category: val }));
@@ -103,10 +84,11 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
 
     try {
       setIsUploading(true);
+      setFormError('');
       const uploadedUrl = await uploadItemImage(file, shopSlug);
       setForm((prev) => ({ ...prev, imageUrl: uploadedUrl }));
-    } catch (err) {
-      console.error('Gagal memproses gambar:', err);
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : 'Gagal memproses gambar.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -127,16 +109,36 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
+
+    let finalCategory = form.category?.trim();
     if (isCustomCategory) {
-      const trimmed = customCategoryInput.trim();
-      if (!trimmed) {
+      finalCategory = customCategoryInput.trim();
+      if (!finalCategory) {
+        setFormError('Nama kategori baru tidak boleh kosong.');
         return;
       }
-      setForm((prev) => ({ ...prev, category: trimmed }));
     }
-    onSubmit(e);
+
+    if (!finalCategory) {
+      finalCategory = categories[0] || 'Camping';
+    }
+
+    const payload: NewItemFormState = {
+      ...form,
+      category: finalCategory,
+    };
+
+    setSubmitting(true);
+    try {
+      await onSubmit(payload);
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : 'Gagal menyimpan unit ke katalog.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -146,11 +148,14 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
         className="bg-white w-full max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-5 space-y-3.5 shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <h3 className="text-base font-extrabold text-slate-900">+ Tambah Unit Inventaris</h3>
+          <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-1.5">
+            <PlusCircle className="w-4 h-4 text-emerald-600" />
+            <span>Tambah Unit Inventaris</span>
+          </h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-xs font-bold text-slate-400 hover:text-slate-700"
+            className="text-xs font-bold text-slate-400 hover:text-slate-700 p-1"
           >
             Batal ✕
           </button>
@@ -163,7 +168,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
             <button
               type="button"
               onClick={() => setIsUrlMode(!isUrlMode)}
-              className="text-[10px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+              className="text-[10px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
             >
               <Link2 className="w-3 h-3" />
               <span>{isUrlMode ? 'Upload File' : 'Gunakan URL'}</span>
@@ -271,8 +276,11 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               required
               placeholder="Contoh: Proyektor Epson EB-X500"
               value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5"
+              onChange={(e) => {
+                setFormError('');
+                setForm({ ...form, name: e.target.value });
+              }}
+              className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
@@ -282,7 +290,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               placeholder="PRJ-01"
               value={form.sku}
               onChange={(e) => setForm({ ...form, sku: e.target.value })}
-              className="w-full text-xs font-mono border border-slate-300 rounded-xl px-3 py-2.5"
+              className="w-full text-xs font-mono border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -319,7 +327,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               <select
                 value={form.category}
                 onChange={handleSelectChange}
-                className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 {categories.map((cat) => (
                   <option key={cat} value={cat}>
@@ -337,12 +345,16 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               Tarif Sewa / Hari (Rp) *
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               required
-              placeholder="100000"
+              placeholder="Contoh: 100000"
               value={form.pricePerDay}
-              onChange={(e) => setForm({ ...form, pricePerDay: e.target.value })}
-              className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5"
+              onChange={(e) => {
+                setFormError('');
+                setForm({ ...form, pricePerDay: e.target.value });
+              }}
+              className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -355,7 +367,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               placeholder="Contoh: 3600 ANSI Lumens + HDMI"
               value={form.spec1}
               onChange={(e) => setForm({ ...form, spec1: e.target.value })}
-              className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
+              className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div>
@@ -365,17 +377,31 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               min="1"
               value={form.stock}
               onChange={(e) => setForm({ ...form, stock: Number(e.target.value) || 1 })}
-              className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
+              className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
 
+        {formError && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 flex items-start gap-2 text-xs text-rose-700 font-medium">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <span>{formError}</span>
+          </div>
+        )}
+
         <button
           type="submit"
-          disabled={isUploading}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl shadow-md transition cursor-pointer"
+          disabled={isUploading || submitting}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl shadow-md transition cursor-pointer flex items-center justify-center gap-2"
         >
-          Simpan ke Katalog
+          {submitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Menyimpan ke Katalog...</span>
+            </>
+          ) : (
+            <span>Simpan ke Katalog</span>
+          )}
         </button>
       </form>
     </div>

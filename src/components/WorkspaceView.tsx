@@ -13,14 +13,26 @@ import {
   CheckCircle2,
   XCircle,
   Wrench,
-  KeyRound,
   Upload,
   X,
   Link2,
   Loader2,
   Tent,
+  CalendarCheck,
+  UserPlus,
+  Mail,
 } from 'lucide-react';
-import { Shop, RentalItem, ActivityLog, Role, WorkspaceTab, ItemStatus } from '../types';
+import {
+  Shop,
+  RentalItem,
+  ActivityLog,
+  Role,
+  WorkspaceTab,
+  ItemStatus,
+  Booking,
+  BookingStatus,
+  ShopInvite,
+} from '../types';
 import { uploadShopLogo } from '@/lib/imageUtils';
 
 interface WorkspaceViewProps {
@@ -35,6 +47,10 @@ interface WorkspaceViewProps {
   workspaceTab: WorkspaceTab;
   setWorkspaceTab: (tab: WorkspaceTab) => void;
   shopLogs: ActivityLog[];
+  bookings: Booking[];
+  invites: ShopInvite[];
+  onUpdateBookingStatus: (bookingId: string, newStatus: BookingStatus) => Promise<void>;
+  onInviteMember: (email: string, role: 'owner' | 'staff') => Promise<void>;
   adminSearch: string;
   setAdminSearch: (val: string) => void;
   filteredAdminItems: RentalItem[];
@@ -59,6 +75,10 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   workspaceTab,
   setWorkspaceTab,
   shopLogs,
+  bookings,
+  invites,
+  onUpdateBookingStatus,
+  onInviteMember,
   adminSearch,
   setAdminSearch,
   filteredAdminItems,
@@ -77,6 +97,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUrlMode, setIsUrlMode] = useState(false);
   const [logoUrlInput, setLogoUrlInput] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'staff' | 'owner'>('staff');
+  const [isInviting, setIsInviting] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -146,7 +169,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         </div>
 
         {/* Sub-Navigasi Internal */}
-        <div className="grid grid-cols-3 gap-1 bg-slate-800 p-1 rounded-xl mt-3.5">
+        <div className="grid grid-cols-4 gap-1 bg-slate-800 p-1 rounded-xl mt-3.5">
           <button
             onClick={() => setWorkspaceTab('inventory')}
             className={`py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition ${
@@ -156,7 +179,19 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             }`}
           >
             <Sliders className="w-3 h-3" />
-            <span>Stok & Status</span>
+            <span>Stok</span>
+          </button>
+
+          <button
+            onClick={() => setWorkspaceTab('bookings')}
+            className={`py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition ${
+              workspaceTab === 'bookings'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            <CalendarCheck className="w-3 h-3" />
+            <span>Booking ({bookings.length})</span>
           </button>
 
           <button
@@ -173,7 +208,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
           <button
             onClick={() => {
-              if (currentRole !== 'owner' && currentRole !== 'superadmin') {
+              if (currentRole !== 'owner') {
                 triggerToast('Terbatas: Pengaturan Toko hanya untuk Owner.');
                 return;
               }
@@ -188,7 +223,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             }`}
           >
             <Settings className="w-3 h-3" />
-            <span>Pengaturan</span>
+            <span>Profil</span>
           </button>
         </div>
       </div>
@@ -216,7 +251,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
           <div className="flex items-center gap-2">
             {/* Tombol Tambah Alat Hanya Muncul untuk Owner */}
-            {(currentRole === 'owner' || currentRole === 'superadmin') && (
+            {currentRole === 'owner' && (
               <button
                 onClick={onOpenAddModal}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 shrink-0"
@@ -289,7 +324,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   </button>
 
                   {/* Hanya Owner yang bisa menghapus unit */}
-                  {(currentRole === 'owner' || currentRole === 'superadmin') && (
+                  {currentRole === 'owner' && (
                     <button
                       onClick={() => onDeleteUnit(item.id, item.name)}
                       className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200 transition"
@@ -409,6 +444,88 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         </div>
       )}
 
+      {/* SUB-TAB BOOKING: DAFTAR PESANAN & JADWAL SEWA */}
+      {workspaceTab === 'bookings' && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-sm">
+          <div className="border-b border-slate-100 pb-2.5">
+            <h3 className="text-sm font-extrabold text-slate-900">
+              Jadwal Booking & Ketersediaan Tanggal
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              Booking yang berstatus Confirmed atau Picked Up otomatis mengurangi stok pada tanggal terkait.
+            </p>
+          </div>
+
+          {bookings.length === 0 ? (
+            <div className="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200/80">
+              Belum ada pengajuan booking tercatat untuk toko ini.
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {bookings.map((bk) => (
+                <div
+                  key={bk.id}
+                  className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-mono font-extrabold bg-slate-900 text-emerald-400 px-2 py-0.5 rounded">
+                        {bk.code}
+                      </span>
+                      <h4 className="text-xs font-extrabold text-slate-900 mt-1">
+                        {bk.customerName} ({bk.customerPhone})
+                      </h4>
+                      <p className="text-[11px] text-slate-600">
+                        📅 {bk.startDate} s/d {bk.endDate} ({bk.durationDays} hari)
+                      </p>
+                    </div>
+                    <span className="text-xs font-extrabold text-emerald-700">
+                      {formatRp(bk.totalAmount)}
+                    </span>
+                  </div>
+
+                  {bk.lines && bk.lines.length > 0 && (
+                    <ul className="text-[11px] text-slate-600 bg-white rounded-lg p-2 border border-slate-200/80 space-y-0.5">
+                      {bk.lines.map((ln) => (
+                        <li key={ln.id} className="flex justify-between">
+                          <span>
+                            • {ln.itemName} × {ln.qty}
+                          </span>
+                          <span className="font-semibold">{formatRp(ln.subtotal)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {bk.notes && (
+                    <p className="text-[11px] text-slate-500 italic">Catatan: {bk.notes}</p>
+                  )}
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[10px] font-bold uppercase text-slate-500">
+                      Status Booking:
+                    </span>
+                    <select
+                      value={bk.status}
+                      onChange={(e) =>
+                        onUpdateBookingStatus(bk.id, e.target.value as BookingStatus)
+                      }
+                      className="text-xs font-bold bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800"
+                    >
+                      <option value="pending">⏳ Pending (Menunggu DP)</option>
+                      <option value="confirmed">✅ Confirmed (Kunci Stok)</option>
+                      <option value="picked_up">📦 Picked Up (Barang Diambil)</option>
+                      <option value="returned">🏁 Returned (Selesai Kembali)</option>
+                      <option value="cancelled">❌ Cancelled (Batal)</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* SUB-TAB 2: LOG RIWAYAT AKTIVITAS (AUDIT TRAIL) */}
       {workspaceTab === 'logs' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-sm">
@@ -450,16 +567,15 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 3: PENGATURAN TOKO & PIN */}
-      {workspaceTab === 'settings' &&
-        (currentRole === 'owner' || currentRole === 'superadmin') && (
+      {/* SUB-TAB 3: PENGATURAN TOKO & UNDANGAN TIM */}
+      {workspaceTab === 'settings' && currentRole === 'owner' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-sm">
             <div className="border-b border-slate-100 pb-2.5">
               <h3 className="text-sm font-extrabold text-slate-900">
-                Pengaturan Profil & Keamanan Role
+                Pengaturan Profil & Akses Anggota Tim
               </h3>
               <p className="text-[11px] text-slate-500">
-                Hanya Owner yang dapat mengubah informasi bisnis dan PIN staf.
+                Hanya Owner yang dapat mengubah informasi bisnis dan mengundang Staf Gudang via email.
               </p>
             </div>
 
@@ -654,38 +770,73 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 />
               </div>
 
-              {/* Pengaturan PIN Akses Role */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-                <span className="text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
-                  Manajemen PIN Akses Role
-                </span>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">
-                      PIN Owner (Full Akses)
-                    </label>
-                    <input
-                      type="password"
-                      maxLength={6}
-                      value={shop.ownerPin || '1234'}
-                      onChange={(e) => onSaveShopSettings({ ...shop, ownerPin: e.target.value })}
-                      className="w-full text-xs font-mono font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">
-                      PIN Staf Gudang (Terbatas)
-                    </label>
-                    <input
-                      type="password"
-                      maxLength={6}
-                      value={shop.staffPin || '0000'}
-                      onChange={(e) => onSaveShopSettings({ ...shop, staffPin: e.target.value })}
-                      className="w-full text-xs font-mono font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white"
-                    />
-                  </div>
+              {/* Manajemen Anggota & Undangan Email Staf Gudang (Menggantikan PIN Plaintext) */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div>
+                  <span className="text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5">
+                    <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+                    Undang Staf Gudang / Co-Owner via Email
+                  </span>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Staf yang diundang cukup login dengan alamat emailnya menggunakan Magic Link / OTP untuk langsung mendapatkan akses operasional gudang.
+                  </p>
                 </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      placeholder="staf.gudang@email.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className="w-full pl-8 pr-2.5 py-2 text-xs bg-white border border-slate-300 rounded-xl"
+                    />
+                  </div>
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as 'staff' | 'owner')}
+                    className="text-xs font-bold bg-white border border-slate-300 rounded-xl px-2.5 py-2"
+                  >
+                    <option value="staff">Staf Gudang</option>
+                    <option value="owner">Co-Owner</option>
+                  </select>
+                  <button
+                    type="button"
+                    disabled={isInviting || !inviteEmail.trim()}
+                    onClick={async () => {
+                      setIsInviting(true);
+                      try {
+                        await onInviteMember(inviteEmail.trim(), inviteRole);
+                        setInviteEmail('');
+                      } finally {
+                        setIsInviting(false);
+                      }
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2 rounded-xl shrink-0"
+                  >
+                    {isInviting ? 'Mengundang...' : 'Undang'}
+                  </button>
+                </div>
+
+                {invites.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-bold uppercase text-slate-400">
+                      Daftar Undangan Akses ({invites.length})
+                    </span>
+                    {invites.map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="flex items-center justify-between text-[11px] bg-white border border-slate-200 rounded-lg px-2.5 py-1.5"
+                      >
+                        <span className="font-mono text-slate-700 truncate">{inv.email}</span>
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                          {inv.role} • {inv.acceptedAt ? 'Aktif' : 'Menunggu Login'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button

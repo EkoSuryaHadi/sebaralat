@@ -28,8 +28,6 @@ export interface NewShopFormState {
   whatsapp: string;
   location: string;
   hours: string;
-  ownerPin: string;
-  staffPin: string;
 }
 
 interface LandingPageProps {
@@ -38,6 +36,8 @@ interface LandingPageProps {
   newShopForm: NewShopFormState;
   setNewShopForm: React.Dispatch<React.SetStateAction<NewShopFormState>>;
   onCreateNewShop: (e: React.FormEvent) => void;
+  userEmail?: string | null;
+  onOpenAuthModal?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -46,6 +46,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   newShopForm,
   setNewShopForm,
   onCreateNewShop,
+  userEmail,
+  onOpenAuthModal,
 }) => {
   const [openFaq, setOpenFaq] = useState(0);
 
@@ -529,37 +531,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-950 flex items-center justify-between gap-2">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Buat PIN Owner (Full Akses)
-                  </label>
-                  <input
-                    type="password"
-                    maxLength={6}
-                    required
-                    value={newShopForm.ownerPin}
-                    onChange={(e) =>
-                      setNewShopForm({ ...newShopForm, ownerPin: e.target.value })
-                    }
-                    className="w-full text-xs font-mono font-bold border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900"
-                  />
+                  <span className="font-bold block">
+                    {userEmail
+                      ? `Terhubung sebagai: ${userEmail}`
+                      : 'Akun Owner Terlindungi Supabase Auth'}
+                  </span>
+                  <span className="text-[11px] text-emerald-800">
+                    {userEmail
+                      ? 'Toko baru akan langsung terikat ke akun email Anda.'
+                      : 'Login via Magic Link / OTP email untuk mengklaim kepemilikan toko.'}
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Buat PIN Staf Gudang
-                  </label>
-                  <input
-                    type="password"
-                    maxLength={6}
-                    required
-                    value={newShopForm.staffPin}
-                    onChange={(e) =>
-                      setNewShopForm({ ...newShopForm, staffPin: e.target.value })
-                    }
-                    className="w-full text-xs font-mono font-bold border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900"
-                  />
-                </div>
+                {!userEmail && onOpenAuthModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenAuthModal}
+                    className="shrink-0 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-3 py-2 rounded-xl"
+                  >
+                    Login Email
+                  </button>
+                )}
               </div>
 
               <button

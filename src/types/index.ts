@@ -1,7 +1,8 @@
-export type Role = 'customer' | 'staff' | 'owner' | 'superadmin';
+export type Role = 'customer' | 'staff' | 'owner';
 export type ViewMode = 'saas_home' | 'catalog' | 'workspace';
-export type WorkspaceTab = 'inventory' | 'logs' | 'settings';
+export type WorkspaceTab = 'inventory' | 'bookings' | 'logs' | 'settings';
 export type ItemStatus = 'available' | 'rented' | 'maintenance';
+export type BookingStatus = 'pending' | 'confirmed' | 'picked_up' | 'returned' | 'cancelled';
 
 export interface Shop {
   slug: string;
@@ -12,17 +13,33 @@ export interface Shop {
   mapsUrl?: string;
   hours: string;
   whatsapp: string;
-  ownerPin?: string;
-  staffPin?: string;
   isVerified?: boolean;
-  plan?: string;
-  ownerId?: string;
+  plan?: 'FREE' | 'PRO';
   terms: string[];
   partnerShop?: {
     name: string;
     slug: string;
   };
   logoUrl?: string;
+}
+
+export interface ShopMember {
+  shopSlug: string;
+  userId: string;
+  email: string;
+  role: 'owner' | 'staff';
+  createdAt: string;
+}
+
+export interface ShopInvite {
+  id: string;
+  shopSlug: string;
+  email: string;
+  role: 'owner' | 'staff';
+  token: string;
+  acceptedAt?: string | null;
+  expiresAt: string;
+  createdAt: string;
 }
 
 export interface RentalItem {
@@ -49,6 +66,7 @@ export interface ActivityLog {
   actorRole: string;
   action: string;
   time: string;
+  createdAt?: string;
 }
 
 export interface DurationOption {
@@ -61,4 +79,30 @@ export interface DurationOption {
 export interface CartItem extends RentalItem {
   qty: number;
   subtotal: number;
+}
+
+export interface BookingLine {
+  id: string;
+  bookingId: string;
+  itemId: string;
+  itemName: string;
+  qty: number;
+  unitPricePerDay: number;
+  subtotal: number;
+}
+
+export interface Booking {
+  id: string;
+  shopSlug: string;
+  code: string;
+  customerName: string;
+  customerPhone: string;
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+  status: BookingStatus;
+  totalAmount: number;
+  notes: string;
+  createdAt: string;
+  lines?: BookingLine[];
 }

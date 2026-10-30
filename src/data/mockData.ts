@@ -1,4 +1,4 @@
-import { Shop, RentalItem, DurationOption } from '../types';
+import type { Shop, RentalItem, DurationOption } from '../types/index.ts';
 
 export const DEFAULT_SHOPS: Shop[] = [
   {
@@ -10,21 +10,18 @@ export const DEFAULT_SHOPS: Shop[] = [
     mapsUrl: 'https://maps.google.com',
     hours: '08.00 - 21.00 WITA',
     whatsapp: '6281234567890',
-    ownerPin: '1234',
-    staffPin: '0000',
     isVerified: true,
     plan: 'PRO',
-    ownerId: 'demo-owner',
     terms: [
       'Wajib meninggalkan E-KTP asli domisili aktif sebagai jaminan.',
       'Pelunasan dilakukan saat pengambilan unit (Tersedia QRIS & Transfer Bank).',
       'Keterlambatan pengembalian dikenakan denda 10% per jam dari tarif harian.',
-      'Segala bentuk kerusakan akibat kelalaian pemakaian menjadi tanggung jawab penyewa.'
+      'Segala bentuk kerusakan akibat kelalaian pemakaian menjadi tanggung jawab penyewa.',
     ],
     partnerShop: {
       name: 'Kaltim Pro Kamera & Multimedia',
-      slug: 'kaltim-kamera'
-    }
+      slug: 'kaltim-kamera',
+    },
   },
   {
     slug: 'kaltim-kamera',
@@ -35,25 +32,22 @@ export const DEFAULT_SHOPS: Shop[] = [
     mapsUrl: 'https://maps.google.com',
     hours: '09.00 - 22.00 WITA',
     whatsapp: '6281298765432',
-    ownerPin: '1234',
-    staffPin: '0000',
     isVerified: true,
     plan: 'PRO',
-    ownerId: 'demo-owner-2',
     terms: [
       'Wajib menunjukkan minimal 2 identitas aktif yang sesuai (E-KTP + SIM/NPWP/ID Kerja).',
-      'Booking jadwal tanggal wajib DP minimal 30% melalui QRIS resmi toko.'
+      'Booking jadwal tanggal wajib DP minimal 30% melalui QRIS resmi toko.',
     ],
     partnerShop: {
       name: 'Borneo Outdoor & Teknik Rental',
-      slug: 'borneo-rental'
-    }
-  }
+      slug: 'borneo-rental',
+    },
+  },
 ];
 
 export const DEFAULT_ITEMS: RentalItem[] = [
   {
-    id: 'item-1',
+    id: '00000000-0000-4000-8000-000000000001',
     shopSlug: 'borneo-rental',
     sku: 'BRN-TND-01',
     name: 'Tenda Eiger Kapasitas 4-5 Orang',
@@ -65,11 +59,15 @@ export const DEFAULT_ITEMS: RentalItem[] = [
     availableAt: '',
     renterNote: '',
     lastUpdatedBy: 'Owner',
-    specs: ['Double layer waterproof tahan badai', 'Frame alloy ringan + pasak lengkap', 'Dimensi 210 x 240 cm + Vestibule'],
-    imageBg: 'from-emerald-600 to-teal-800'
+    specs: [
+      'Double layer waterproof tahan badai',
+      'Frame alloy ringan + pasak lengkap',
+      'Dimensi 210 x 240 cm + Vestibule',
+    ],
+    imageBg: 'from-emerald-600 to-teal-800',
   },
   {
-    id: 'item-2',
+    id: '00000000-0000-4000-8000-000000000002',
     shopSlug: 'borneo-rental',
     sku: 'BRN-GNS-02',
     name: 'Genset Silent Inverter 2200W',
@@ -77,15 +75,19 @@ export const DEFAULT_ITEMS: RentalItem[] = [
     iconType: 'zap',
     pricePerDay: 175000,
     status: 'rented',
-    stock: 0,
-    availableAt: 'Minggu, 1 Nov (14:00)',
+    stock: 1,
+    availableAt: 'Besok, 14:00 WITA',
     renterNote: 'Pak Budi - Proyek Ruko MT Haryono',
     lastUpdatedBy: 'Staf Gudang',
-    specs: ['Tipe Silent (Suara sangat halus)', 'BBM Bensin Murni (Hemat konsumsi)', 'Output stabil aman untuk alat elektronik'],
-    imageBg: 'from-amber-600 to-orange-800'
+    specs: [
+      'Tipe Silent (Suara sangat halus)',
+      'BBM Bensin Murni (Hemat konsumsi)',
+      'Output stabil aman untuk alat elektronik',
+    ],
+    imageBg: 'from-amber-600 to-orange-800',
   },
   {
-    id: 'item-3',
+    id: '00000000-0000-4000-8000-000000000003',
     shopSlug: 'borneo-rental',
     sku: 'BRN-JCK-03',
     name: 'Jackhammer / Mesin Bobok Beton PH65',
@@ -97,11 +99,15 @@ export const DEFAULT_ITEMS: RentalItem[] = [
     availableAt: '',
     renterNote: '',
     lastUpdatedBy: 'Owner',
-    specs: ['Daya 1240W impact tinggi', 'Termasuk 2 mata pahat baja (lancip & pipih)', 'Koper besi + kabel ekstensi 10 meter'],
-    imageBg: 'from-slate-700 to-slate-900'
+    specs: [
+      'Daya 1240W impact tinggi',
+      'Termasuk 2 mata pahat baja (lancip & pipih)',
+      'Koper besi + kabel ekstensi 10 meter',
+    ],
+    imageBg: 'from-slate-700 to-slate-900',
   },
   {
-    id: 'item-4',
+    id: '00000000-0000-4000-8000-000000000004',
     shopSlug: 'borneo-rental',
     sku: 'BRN-CAM-04',
     name: 'Kamera Mirrorless Sony A6400 + Kit',
@@ -113,11 +119,15 @@ export const DEFAULT_ITEMS: RentalItem[] = [
     availableAt: '',
     renterNote: '',
     lastUpdatedBy: 'Owner',
-    specs: ['Sensor 24MP & Perekaman 4K HDR', 'Include 2 Baterai + SD Card 64GB Extreme', 'Tas pelindung + Charger dual slot'],
-    imageBg: 'from-indigo-600 to-purple-800'
+    specs: [
+      'Sensor 24MP & Perekaman 4K HDR',
+      'Include 2 Baterai + SD Card 64GB Extreme',
+      'Tas pelindung + Charger dual slot',
+    ],
+    imageBg: 'from-indigo-600 to-purple-800',
   },
   {
-    id: 'item-5',
+    id: '00000000-0000-4000-8000-000000000005',
     shopSlug: 'borneo-rental',
     sku: 'BRN-HT-05',
     name: 'Paket 4 Unit HT (Handy Talky) Event',
@@ -129,11 +139,15 @@ export const DEFAULT_ITEMS: RentalItem[] = [
     availableAt: '',
     renterNote: '',
     lastUpdatedBy: 'Owner',
-    specs: ['1 Paket berisi 4 unit HT + Earpiece', 'Jangkauan 2-3 KM area terbuka', 'Baterai awet hingga 18 jam operasional'],
-    imageBg: 'from-blue-600 to-cyan-800'
+    specs: [
+      '1 Paket berisi 4 unit HT + Earpiece',
+      'Jangkauan 2-3 KM area terbuka',
+      'Baterai awet hingga 18 jam operasional',
+    ],
+    imageBg: 'from-blue-600 to-cyan-800',
   },
   {
-    id: 'item-6',
+    id: '00000000-0000-4000-8000-000000000006',
     shopSlug: 'borneo-rental',
     sku: 'BRN-KMP-06',
     name: 'Kompor Portable Windproof + Gas',
@@ -141,15 +155,19 @@ export const DEFAULT_ITEMS: RentalItem[] = [
     iconType: 'tent',
     pricePerDay: 30000,
     status: 'maintenance',
-    stock: 0,
+    stock: 1,
     availableAt: 'Pengecekan katup pengaman',
     renterNote: 'Inspeksi rutin bulanan di gudang',
     lastUpdatedBy: 'Staf Gudang',
-    specs: ['Kelopak pelindung angin terintegrasi', 'Sudah termasuk 1 kaleng gas baru', 'Box koper plastik keras'],
-    imageBg: 'from-rose-600 to-red-800'
+    specs: [
+      'Kelopak pelindung angin terintegrasi',
+      'Sudah termasuk 1 kaleng gas baru',
+      'Box koper plastik keras',
+    ],
+    imageBg: 'from-rose-600 to-red-800',
   },
   {
-    id: 'item-7',
+    id: '00000000-0000-4000-8000-000000000007',
     shopSlug: 'kaltim-kamera',
     sku: 'KLT-SNY-01',
     name: 'Sony A7III Fullframe + Tamron 28-75mm',
@@ -161,11 +179,15 @@ export const DEFAULT_ITEMS: RentalItem[] = [
     availableAt: '',
     renterNote: '',
     lastUpdatedBy: 'Owner',
-    specs: ['Full Frame Sensor 24MP Lowlight', 'Lensa bukaan konstan f/2.8 tajam', '2 Baterai FZ100 + SD Card 128GB'],
-    imageBg: 'from-indigo-600 to-violet-900'
+    specs: [
+      'Full Frame Sensor 24MP Lowlight',
+      'Lensa bukaan konstan f/2.8 tajam',
+      '2 Baterai FZ100 + SD Card 128GB',
+    ],
+    imageBg: 'from-indigo-600 to-violet-900',
   },
   {
-    id: 'item-8',
+    id: '00000000-0000-4000-8000-000000000008',
     shopSlug: 'kaltim-kamera',
     sku: 'KLT-DJI-02',
     name: 'Stabilizer Gimbal DJI RS3 Mini',
@@ -177,16 +199,26 @@ export const DEFAULT_ITEMS: RentalItem[] = [
     availableAt: '',
     renterNote: '',
     lastUpdatedBy: 'Owner',
-    specs: ['Native Vertical & Horizontal Shooting', 'Beban maksimal 2 Kg', 'Baterai tahan 10 jam'],
-    imageBg: 'from-cyan-600 to-blue-900'
-  }
+    specs: [
+      'Native Vertical & Horizontal Shooting',
+      'Beban maksimal 2 Kg',
+      'Baterai tahan 10 jam',
+    ],
+    imageBg: 'from-cyan-600 to-blue-900',
+  },
 ];
 
 export const DURATION_OPTIONS: DurationOption[] = [
   { days: 1, label: '1 Hari (24 Jam)', multiplier: 1, discountTag: null },
   { days: 2, label: '2 Hari', multiplier: 2, discountTag: null },
   { days: 3, label: '3 Hari (Hemat 10%)', multiplier: 2.7, discountTag: 'Hemat 10%' },
-  { days: 7, label: '1 Minggu (Hemat 25%)', multiplier: 5.25, discountTag: 'Hemat 25%' }
+  { days: 7, label: '1 Minggu (Hemat 25%)', multiplier: 5.25, discountTag: 'Hemat 25%' },
 ];
 
-export const CATEGORIES = ['Semua', '🟢 Ready Saja', 'Camping', 'Alat Teknik/Proyek', 'Kamera & Audio'];
+export const CATEGORIES = [
+  'Semua',
+  '🟢 Ready Saja',
+  'Camping',
+  'Alat Teknik/Proyek',
+  'Kamera & Audio',
+];

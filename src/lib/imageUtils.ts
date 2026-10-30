@@ -1,8 +1,20 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 
+const MAX_RAW_FILE_BYTES = 8 * 1024 * 1024; // 8 MB batas file mentah sebelum kompresi
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+export function validateImageFile(file: File): void {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error('Format gambar harus berupa JPG, PNG, atau WebP.');
+  }
+  if (file.size > MAX_RAW_FILE_BYTES) {
+    throw new Error('Ukuran file gambar maksimal 8 MB.');
+  }
+}
+
 /**
  * Kompres gambar di sisi klien menggunakan Canvas API
- * Mengurangi ukuran file kamera HP (5-12MB) menjadi ~30-90KB yang sangat ringan
+ * Mengurangi ukuran file kamera HP (5-8MB) menjadi ~30-90KB WebP/JPEG yang ringan
  */
 export async function compressImage(
   file: File,
@@ -10,16 +22,9 @@ export async function compressImage(
   maxHeight = 900,
   quality = 0.82
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    // Jika bukan gambar atau format SVG/GIF, langsung baca as DataURL
-    if (!file.type.startsWith('image/') || file.type.includes('svg') || file.type.includes('gif')) {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-      return;
-    }
+  validateImageFile(file);
 
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
@@ -45,16 +50,14 @@ export async function compressImage(
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(e.target?.result as string);
+          reject(new Error('Browser tidak mendukung pemrosesan kanvas gambar.'));
           return;
         }
 
-        // Gambar latar belakang putih jika ada transparansi pada format non-PNG
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Prioritaskan WebP jika didukung, fallback ke JPEG
         try {
           const webpData = canvas.toDataURL('image/webp', quality);
           if (webpData.startsWith('data:image/webp')) {
@@ -62,23 +65,20 @@ export async function compressImage(
             return;
           }
         } catch {
-          // ignore error
+          // fallback ke JPEG
         }
 
         const jpegData = canvas.toDataURL('image/jpeg', quality);
         resolve(jpegData);
       };
-      img.onerror = () => resolve(e.target?.result as string);
+      img.onerror = () => reject(new Error('File gambar rusak atau tidak dapat dibaca.'));
       img.src = e.target?.result as string;
     };
-    reader.onerror = reject;
+    reader.onerror = () => reject(new Error('Gagal membaca file dari perangkat.'));
     reader.readAsDataURL(file);
   });
 }
 
-/**
- * Helper konversi Data URL ke Blob (untuk upload Supabase Storage)
- */
 function dataURLtoBlob(dataUrl: string): Blob {
   const arr = dataUrl.split(',');
   const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
@@ -91,54 +91,54 @@ function dataURLtoBlob(dataUrl: string): Blob {
   return new Blob([u8arr], { type: mime });
 }
 
+function randomFileId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /**
- * Upload gambar unit: Coba Supabase Storage terlebih dahulu,
- * jika gagal atau tidak terhubung, fallback ke compressed Data URL.
+ * Upload gambar unit ke folder `<shopSlug>/<uuid>.webp` di Supabase Storage.
+ * Tidak menyimpan base64 ke database produksi bila upload cloud gagal,
+ * melainkan melempar pesan error yang jelas.
  */
 export async function uploadItemImage(file: File, shopSlug: string): Promise<string> {
   const compressedDataUrl = await compressImage(file);
 
   if (!isSupabaseConfigured || !supabase) {
+    // Hanya pada mode pengembangan lokal tanpa Supabase
     return compressedDataUrl;
   }
 
-  try {
-    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = `${shopSlug || 'general'}/${Date.now()}-${cleanFileName}`;
-    const blob = dataURLtoBlob(compressedDataUrl);
+  const blob = dataURLtoBlob(compressedDataUrl);
+  const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+  const safeSlug = (shopSlug || 'general').replace(/[^a-z0-9-]/g, '');
+  const filePath = `${safeSlug}/${randomFileId()}.${ext}`;
 
-    const { data, error } = await supabase.storage
-      .from('item-images')
-      .upload(filePath, blob, {
-        contentType: blob.type,
-        upsert: true,
-      });
+  const { data, error } = await supabase.storage
+    .from('item-images')
+    .upload(filePath, blob, {
+      contentType: blob.type,
+      upsert: false,
+    });
 
-    if (error) {
-      console.warn('Supabase storage upload failed, falling back to data URL:', error.message);
-      return compressedDataUrl;
-    }
-
-    if (data?.path) {
-      const { data: publicUrlData } = supabase.storage
-        .from('item-images')
-        .getPublicUrl(data.path);
-
-      if (publicUrlData?.publicUrl) {
-        return publicUrlData.publicUrl;
-      }
-    }
-
-    return compressedDataUrl;
-  } catch (err) {
-    console.warn('Storage upload error, using compressed base64:', err);
-    return compressedDataUrl;
+  if (error || !data?.path) {
+    throw new Error(
+      error?.message || 'Gagal mengunggah foto ke penyimpanan cloud. Pastikan Anda login sebagai Owner.'
+    );
   }
+
+  const { data: publicUrlData } = supabase.storage.from('item-images').getPublicUrl(data.path);
+  if (!publicUrlData?.publicUrl) {
+    throw new Error('Gagal mendapatkan URL publik gambar.');
+  }
+
+  return publicUrlData.publicUrl;
 }
 
 /**
- * Upload logo toko/usaha: Coba Supabase Storage terlebih dahulu,
- * jika gagal atau offline, fallback ke compressed Data URL.
+ * Upload logo toko ke folder `<shopSlug>/logo-<uuid>.webp` agar sesuai policy RLS per-folder toko.
  */
 export async function uploadShopLogo(file: File, shopSlug: string): Promise<string> {
   const compressedDataUrl = await compressImage(file, 500, 500, 0.88);
@@ -147,38 +147,28 @@ export async function uploadShopLogo(file: File, shopSlug: string): Promise<stri
     return compressedDataUrl;
   }
 
-  try {
-    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = `logos/${shopSlug || 'general'}-${Date.now()}-${cleanFileName}`;
-    const blob = dataURLtoBlob(compressedDataUrl);
+  const blob = dataURLtoBlob(compressedDataUrl);
+  const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+  const safeSlug = (shopSlug || 'general').replace(/[^a-z0-9-]/g, '');
+  const filePath = `${safeSlug}/logo-${randomFileId()}.${ext}`;
 
-    const { data, error } = await supabase.storage
-      .from('item-images')
-      .upload(filePath, blob, {
-        contentType: blob.type,
-        upsert: true,
-      });
+  const { data, error } = await supabase.storage
+    .from('item-images')
+    .upload(filePath, blob, {
+      contentType: blob.type,
+      upsert: false,
+    });
 
-    if (error) {
-      console.warn('Supabase logo upload failed, using data URL:', error.message);
-      return compressedDataUrl;
-    }
-
-    if (data?.path) {
-      const { data: publicUrlData } = supabase.storage
-        .from('item-images')
-        .getPublicUrl(data.path);
-
-      if (publicUrlData?.publicUrl) {
-        return publicUrlData.publicUrl;
-      }
-    }
-
-    return compressedDataUrl;
-  } catch (err) {
-    console.warn('Logo storage upload error, using compressed base64:', err);
-    return compressedDataUrl;
+  if (error || !data?.path) {
+    throw new Error(
+      error?.message || 'Gagal mengunggah logo toko. Pastikan Anda login sebagai Owner toko ini.'
+    );
   }
+
+  const { data: publicUrlData } = supabase.storage.from('item-images').getPublicUrl(data.path);
+  if (!publicUrlData?.publicUrl) {
+    throw new Error('Gagal mendapatkan URL publik logo.');
+  }
+
+  return publicUrlData.publicUrl;
 }
-
-
