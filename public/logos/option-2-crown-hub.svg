@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="opt2_grad_crown" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="opt2_grad_gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="opt2_grad_cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+  </defs>
+
+  <!-- ICON EMBLEM -->
+  <g transform="translate(18, 12)">
+    <!-- Shield / Badge Backing -->
+    <rect x="6" y="6" width="84" height="84" rx="24" fill="#0f172a" />
+    
+    <!-- Broadcast Waves around Crown -->
+    <path d="M 22 36 A 38 38 0 0 1 74 36" stroke="#334155" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4 6" />
+    <path d="M 16 28 A 48 48 0 0 1 80 28" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- Modern Geometric Crown with Network Nodes -->
+    <!-- Left Peak -->
+    <path d="M 25 64 L 27 42 L 39 52" stroke="url(#opt2_grad_cyan)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="27" cy="38" r="4" fill="#06b6d4" />
+
+    <!-- Center Peak (Tallest) -->
+    <path d="M 39 52 L 48 28 L 57 52" stroke="url(#opt2_grad_crown)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="48" cy="24" r="5" fill="#10b981" />
+    <circle cx="48" cy="24" r="2" fill="#ffffff" />
+
+    <!-- Right Peak -->
+    <path d="M 57 52 L 69 42 L 71 64" stroke="url(#opt2_grad_cyan)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="69" cy="38" r="4" fill="#06b6d4" />
+
+    <!-- Crown Base Line with Interconnect Links -->
+    <path d="M 23 68 L 73 68" stroke="url(#opt2_grad_crown)" stroke-width="5" stroke-linecap="round" />
+    <circle cx="34" cy="68" r="2.5" fill="#ffffff" />
+    <circle cx="48" cy="68" r="2.5" fill="#ffffff" />
+    <circle cx="62" cy="68" r="2.5" fill="#ffffff" />
+  </g>
+
+  <!-- WORDMARK: SEBARAJA -->
+  <g transform="translate(132, 74)">
+    <text font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="900" fill="#0f172a" letter-spacing="-1">
+      SEBAR<tspan fill="#10b981">AJA</tspan>
+    </text>
+    <text x="3" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#64748b" letter-spacing="3.5">
+      RENTAL ECOSYSTEM PLATFORM
+    </text>
+  </g>
+</svg>
+

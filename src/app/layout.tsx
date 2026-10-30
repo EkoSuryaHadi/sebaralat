@@ -13,8 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TebarAlat - Platform Katalog Rental & Cek Stok Real-Time",
+  title: "Sebaraja - Platform Katalog Rental & Cek Stok Real-Time",
   description: "Micro-SaaS katalog rental alat instan untuk WhatsApp dan media sosial. Cek ketersediaan ready, disewa, hitung sewa otomatis, dan manajemen staf gudang.",
+  icons: {
+    icon: "/logo-icon.svg",
+    apple: "/logo-icon.svg",
+  },
 };
 
 export default function RootLayout({

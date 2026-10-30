@@ -35,6 +35,7 @@ export interface ShopDbRow {
   owner_id?: string | null;
   terms?: string[] | null;
   partner_shop?: { name: string; slug: string } | null;
+  logo_url?: string | null;
 }
 
 export interface RentalItemDbRow {
@@ -52,6 +53,7 @@ export interface RentalItemDbRow {
   last_updated_by?: string | null;
   specs?: string[] | null;
   image_bg?: string | null;
+  image_url?: string | null;
 }
 
 export interface ActivityLogDbRow {
@@ -82,6 +84,7 @@ export const mapShopFromDb = (row: ShopDbRow): Shop => ({
   ownerId: row.owner_id || 'demo-owner',
   terms: Array.isArray(row.terms) ? row.terms : [],
   partnerShop: row.partner_shop || undefined,
+  logoUrl: row.logo_url || '',
 });
 
 export const mapShopToDb = (shop: Shop): ShopDbRow => ({
@@ -100,6 +103,7 @@ export const mapShopToDb = (shop: Shop): ShopDbRow => ({
   owner_id: shop.ownerId || 'demo-owner',
   terms: shop.terms || [],
   partner_shop: shop.partnerShop || null,
+  logo_url: shop.logoUrl || null,
 });
 
 export const mapItemFromDb = (row: RentalItemDbRow): RentalItem => ({
@@ -117,6 +121,7 @@ export const mapItemFromDb = (row: RentalItemDbRow): RentalItem => ({
   lastUpdatedBy: row.last_updated_by || 'Owner',
   specs: Array.isArray(row.specs) ? row.specs : [],
   imageBg: row.image_bg || 'from-emerald-600 to-teal-800',
+  imageUrl: row.image_url || undefined,
 });
 
 export const mapItemToDb = (item: RentalItem): RentalItemDbRow => ({
@@ -134,6 +139,7 @@ export const mapItemToDb = (item: RentalItem): RentalItemDbRow => ({
   last_updated_by: item.lastUpdatedBy || 'Owner',
   specs: item.specs || [],
   image_bg: item.imageBg,
+  image_url: item.imageUrl || null,
 });
 
 export const mapLogFromDb = (row: ActivityLogDbRow): ActivityLog => ({

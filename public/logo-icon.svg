@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="icon_grad_inf1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="icon_grad_inf2" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect width="100" height="100" rx="24" fill="#0f172a" />
+
+  <!-- Infinity Rental Loop -->
+  <g transform="translate(2, 4)">
+    <!-- Infinity Left Loop -->
+    <path d="M 48 46 C 36 26, 14 28, 14 46 C 14 64, 34 66, 48 46" 
+          stroke="url(#icon_grad_inf1)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Infinity Right Loop -->
+    <path d="M 48 46 C 62 26, 82 28, 82 46 C 82 64, 62 66, 48 46" 
+          stroke="url(#icon_grad_inf2)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Directional circulation dots -->
+    <circle cx="22" cy="46" r="3" fill="#ffffff" />
+    <circle cx="74" cy="46" r="3" fill="#ffffff" />
+
+    <!-- Center Lightning / Bolt Accent -->
+    <path d="M 50 33 L 44 48 L 53 48 L 47 61" 
+          stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  </g>
+</svg>
+

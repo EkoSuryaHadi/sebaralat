@@ -40,9 +40,26 @@ export const QrModal: React.FC<QrModalProps> = ({
           <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
             {selectedQrItem ? `ASSET TAG • ${selectedQrItem.sku || 'UNIT'}` : 'OFFICIAL RENTAL CATALOG'}
           </p>
-          <h4 className="text-sm font-black text-slate-900">
-            {selectedQrItem ? selectedQrItem.name : shop.name}
-          </h4>
+          <div className="flex items-center justify-center gap-2">
+            {selectedQrItem?.imageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={selectedQrItem.imageUrl}
+                alt=""
+                className="w-7 h-7 rounded-lg object-cover border border-slate-200 shrink-0"
+              />
+            ) : !selectedQrItem && shop.logoUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={shop.logoUrl}
+                alt=""
+                className="w-7 h-7 rounded-lg object-cover border border-slate-200 shrink-0"
+              />
+            ) : null}
+            <h4 className="text-sm font-black text-slate-900">
+              {selectedQrItem ? selectedQrItem.name : shop.name}
+            </h4>
+          </div>
 
           <div className="w-36 h-36 mx-auto bg-white p-3 rounded-2xl border border-slate-300 shadow-inner flex flex-col items-center justify-center">
             <QrCode className="w-28 h-28 text-slate-900 stroke-[1.5]" />
@@ -51,7 +68,7 @@ export const QrModal: React.FC<QrModalProps> = ({
           <p className="text-xs font-bold text-emerald-700">
             Scan untuk Cek Ketersediaan & Booking WA
           </p>
-          <p className="text-[10px] font-mono text-slate-500">tebaralat.id/{shop.slug}</p>
+          <p className="text-[10px] font-mono text-slate-500">sebaraja.com/{shop.slug}</p>
         </div>
 
         <button

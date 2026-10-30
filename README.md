@@ -1,4 +1,4 @@
-# TebarAlat (SebarAlat) ⚡
+# Sebaraja ⚡
 
 Platform Micro-SaaS katalog persewaan alat & perlengkapan instan untuk WhatsApp dan media sosial (Instagram, TikTok).
 
@@ -11,7 +11,7 @@ Platform Micro-SaaS katalog persewaan alat & perlengkapan instan untuk WhatsApp 
   - **Pelanggan (Publik)**: Akses katalog tanpa perlu login atau install aplikasi.
   - **Staf Gudang (PIN Khusus)**: Mode operasional cepat (1-tap status switch Ready/Disewa & atur stok keluar/masuk).
   - **Owner Toko (Full Akses)**: Manajemen inventaris, atur harga, kelola profil WhatsApp toko, dan cetak stiker QR fisik.
-- **Dynamic Store Routing (`/[slug]`)**: Setiap mitra toko memiliki tautan resmi sendiri (contoh: `tebaralat.id/borneo-rental`) dengan metadata SEO otomatis.
+- **Dynamic Store Routing (`/[slug]`)**: Setiap mitra toko memiliki tautan resmi sendiri (contoh: `sebaraja.com/borneo-rental`) dengan metadata SEO otomatis.
 - **Generator Label QR Fisik**: Stiker QR siap cetak yang dapat ditempel di bodi unit fisik untuk memudahkan penyewa cek ketersediaan kembali.
 
 ---

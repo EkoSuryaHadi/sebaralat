@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import {
   MapPin,
   Clock,
@@ -129,8 +130,19 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       <div className="bg-slate-900 text-white p-5 relative overflow-hidden">
         <div className="flex items-start justify-between gap-3 relative z-10">
           <div className="flex items-center gap-3.5">
-            <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-emerald-500 to-teal-700 flex items-center justify-center shrink-0 shadow-lg border border-white/15">
-              <Tent className="w-7 h-7 text-white" />
+            <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 shadow-lg border border-white/15 bg-slate-800 flex items-center justify-center">
+              {shop.logoUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={shop.logoUrl}
+                  alt={shop.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-linear-to-br from-emerald-500 to-teal-700 flex items-center justify-center">
+                  <Tent className="w-7 h-7 text-white" />
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -306,13 +318,29 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 }`}
               >
                 <div className="p-3.5 flex gap-3.5">
-                  <div
-                    className={`w-20 h-24 rounded-xl bg-linear-to-br ${item.imageBg} flex flex-col items-center justify-center shrink-0 relative shadow-inner`}
-                  >
-                    {renderItemIcon(item.iconType, 'w-8 h-8 text-white/95')}
-                    <span className="text-[9px] text-white/90 font-bold mt-1.5 px-1.5 py-0.5 bg-black/25 rounded">
-                      {item.sku || item.category.split('/')[0]}
-                    </span>
+                  <div className="w-20 h-24 rounded-xl overflow-hidden shrink-0 relative shadow-inner bg-slate-100 border border-slate-200/80">
+                    {item.imageUrl ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute bottom-1 left-1 right-1 text-[9px] text-white font-bold px-1 py-0.5 bg-black/60 backdrop-blur-xs rounded text-center truncate">
+                          {item.sku || item.category.split('/')[0]}
+                        </span>
+                      </>
+                    ) : (
+                      <div
+                        className={`w-full h-full bg-linear-to-br ${item.imageBg} flex flex-col items-center justify-center`}
+                      >
+                        {renderItemIcon(item.iconType, 'w-8 h-8 text-white/95')}
+                        <span className="text-[9px] text-white/90 font-bold mt-1.5 px-1.5 py-0.5 bg-black/25 rounded">
+                          {item.sku || item.category.split('/')[0]}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -459,11 +487,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       {/* FOOTER & AKSES INTERNAL */}
       <div className="mt-10 mb-6 px-4 text-center space-y-3">
         <div className="border-t border-slate-200 pt-5 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-            <span className="w-5 h-5 rounded-md bg-slate-900 text-emerald-400 flex items-center justify-center text-[10px]">
-              ⚡
-            </span>
-            <span>Powered by TebarAlat</span>
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+            <Image src="/logo.svg" alt="Sebaraja" width={110} height={28} className="h-5 w-auto object-contain" />
+            <span>Powered by Sebaraja</span>
           </div>
           <p className="text-[11px] text-slate-400">
             Sistem Katalog & Manajemen Status Inventaris Real-Time

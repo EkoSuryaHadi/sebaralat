@@ -1,5 +1,5 @@
 -- =========================================================
--- SKEMA DATABASE SUPABASE: TEBARALAT (MICRO-SAAS RENTAL)
+-- SKEMA DATABASE SUPABASE: SEBARAJA (MICRO-SAAS RENTAL)
 -- Jalankan skrip ini di SQL Editor pada Dashboard Supabase Anda
 -- =========================================================
 
@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS public.shops (
     owner_id TEXT DEFAULT 'demo-owner',
     terms JSONB DEFAULT '[]'::jsonb,
     partner_shop JSONB,
+    logo_url TEXT DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.rental_items (
     last_updated_by TEXT DEFAULT 'Owner',
     specs JSONB DEFAULT '[]'::jsonb,
     image_bg TEXT DEFAULT 'from-emerald-600 to-teal-800',
+    image_url TEXT DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -270,4 +272,23 @@ VALUES
     'from-cyan-600 to-blue-900'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- =========================================================
+-- 5. KONFIGURASI SUPABASE STORAGE (Opsional untuk Foto Unit)
+-- =========================================================
+-- Buat bucket penyimpanan foto publik 'item-images'
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('item-images', 'item-images', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Kebijakan Akses Storage: Publik dapat melihat foto
+CREATE POLICY "Public Access for Item Images"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'item-images');
+
+-- Kebijakan Akses Storage: Izinkan upload foto unit
+CREATE POLICY "Public Upload Access for Item Images"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'item-images');
+
 

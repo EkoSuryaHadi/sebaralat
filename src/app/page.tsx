@@ -109,7 +109,8 @@ export default function App({ initialShopSlug }: AppProps) {
     pricePerDay: '',
     stock: 1,
     spec1: '',
-    spec2: ''
+    spec2: '',
+    imageUrl: ''
   });
 
   // Form Mitra Toko Baru
@@ -395,6 +396,18 @@ export default function App({ initialShopSlug }: AppProps) {
     );
   }, [items, adminSearch]);
 
+  const selectableCategories = useMemo(() => {
+    const defaultList = ['Camping', 'Alat Teknik/Proyek', 'Kamera & Audio'];
+    const fromItems = items
+      .map((item) => item.category?.trim())
+      .filter((cat): cat is string => Boolean(cat) && cat !== 'Semua' && cat !== '🟢 Ready Saja');
+    return Array.from(new Set([...defaultList, ...fromItems]));
+  }, [items]);
+
+  const catalogCategories = useMemo(() => {
+    return ['Semua', '🟢 Ready Saja', ...selectableCategories];
+  }, [selectableCategories]);
+
   const stats = useMemo(() => {
     return {
       ready: items.filter((i) => i.status === 'available').length,
@@ -450,7 +463,7 @@ export default function App({ initialShopSlug }: AppProps) {
       .join('\n');
 
     return (
-      `Halo Admin *${shop.name}*, saya ingin menyewa alat dari katalog resmi:\n\n` +
+      `Halo Admin *${shop.name}*, saya ingin menyewa dari katalog resmi:\n\n` +
       `📅 *Tanggal Ambil:* ${startDate}\n` +
       `⏳ *Durasi Sewa:* ${currentDurationObj.label}\n\n` +
       `📦 *Rincian Unit:*\n${lines}\n\n` +
@@ -462,7 +475,8 @@ export default function App({ initialShopSlug }: AppProps) {
   const handleOpenWhatsApp = (customText?: string) => {
     const textToSend = customText || whatsappMessageText;
     const cleanPhone = (shop.whatsapp || '6281234567890').replace(/[^0-9]/g, '');
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(textToSend)}`;
+    // Gunakan api.whatsapp.com langsung untuk menghindari bug 302 redirect wa.me yang merusak encoding emoji UTF-8 menjadi 
+    const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(textToSend)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -525,18 +539,28 @@ export default function App({ initialShopSlug }: AppProps) {
       triggerToast('Akses Ditolak: Hanya Owner yang dapat menambah unit baru.');
       return;
     }
-    if (!newItemForm.name || !newItemForm.pricePerDay) return;
+    const finalName = newItemForm.name.trim();
+    const finalCategory = newItemForm.category?.trim() || 'Umum';
+    if (!finalName || !newItemForm.pricePerDay) return;
 
-    const iconMap: Record<string, string> = {
-      Camping: 'tent',
-      'Alat Teknik/Proyek': 'hammer',
-      'Kamera & Audio': 'camera'
+    const getIconForCategory = (cat: string) => {
+      const lower = cat.toLowerCase();
+      if (lower.includes('camp') || lower.includes('outdoor') || lower.includes('tenda')) return 'tent';
+      if (lower.includes('teknik') || lower.includes('proyek') || lower.includes('alat') || lower.includes('bor') || lower.includes('mesin')) return 'hammer';
+      if (lower.includes('kamera') || lower.includes('foto') || lower.includes('video') || lower.includes('lensa')) return 'camera';
+      if (lower.includes('listrik') || lower.includes('genset') || lower.includes('power') || lower.includes('baterai')) return 'zap';
+      if (lower.includes('audio') || lower.includes('sound') || lower.includes('mic') || lower.includes('radio') || lower.includes('ht')) return 'radio';
+      return 'shopping-bag';
     };
 
-    const bgMap: Record<string, string> = {
-      Camping: 'from-emerald-600 to-teal-800',
-      'Alat Teknik/Proyek': 'from-amber-600 to-orange-800',
-      'Kamera & Audio': 'from-indigo-600 to-purple-800'
+    const getBgForCategory = (cat: string) => {
+      const lower = cat.toLowerCase();
+      if (lower.includes('camp') || lower.includes('outdoor')) return 'from-emerald-600 to-teal-800';
+      if (lower.includes('teknik') || lower.includes('proyek')) return 'from-amber-600 to-orange-800';
+      if (lower.includes('kamera') || lower.includes('foto') || lower.includes('video')) return 'from-indigo-600 to-purple-800';
+      if (lower.includes('listrik') || lower.includes('genset')) return 'from-yellow-600 to-amber-800';
+      if (lower.includes('audio') || lower.includes('sound')) return 'from-violet-600 to-fuchsia-800';
+      return 'from-cyan-600 to-blue-800';
     };
 
     const autoSku =
@@ -547,9 +571,9 @@ export default function App({ initialShopSlug }: AppProps) {
       id: `item-${Date.now()}`,
       shopSlug: shop.slug,
       sku: autoSku,
-      name: newItemForm.name,
-      category: newItemForm.category,
-      iconType: iconMap[newItemForm.category] || 'tent',
+      name: finalName,
+      category: finalCategory,
+      iconType: getIconForCategory(finalCategory),
       pricePerDay: Number(newItemForm.pricePerDay),
       status: 'available',
       stock: Number(newItemForm.stock) || 1,
@@ -560,11 +584,12 @@ export default function App({ initialShopSlug }: AppProps) {
         newItemForm.spec1 || 'Kondisi prima & terawat',
         newItemForm.spec2 || 'Siap pakai lengkap dengan tas/box'
       ],
-      imageBg: bgMap[newItemForm.category] || 'from-emerald-600 to-teal-800'
+      imageBg: getBgForCategory(finalCategory),
+      imageUrl: newItemForm.imageUrl?.trim() || undefined
     };
 
     saveItemToCloud(newItem);
-    recordAuditLog(`Menambahkan unit baru "${newItem.name}" (${formatRp(newItem.pricePerDay)}/hari)`);
+    recordAuditLog(`Menambahkan unit baru "${newItem.name}" (${formatRp(newItem.pricePerDay)}/hari) - Kategori: ${newItem.category}`);
     setNewItemForm({
       name: '',
       sku: '',
@@ -572,7 +597,8 @@ export default function App({ initialShopSlug }: AppProps) {
       pricePerDay: '',
       stock: 1,
       spec1: '',
-      spec2: ''
+      spec2: '',
+      imageUrl: ''
     });
     setShowAddModal(false);
     triggerToast('Unit baru berhasil ditambahkan ke katalog!');
@@ -644,7 +670,7 @@ export default function App({ initialShopSlug }: AppProps) {
 
   const handleCopyLink = () => {
     const origin =
-      typeof window !== 'undefined' ? window.location.origin : 'https://tebaralat.id';
+      typeof window !== 'undefined' ? window.location.origin : 'https://sebaraja.com';
     copyToClipboard(`${origin}/${shop.slug}`, 'Tautan katalog resmi berhasil disalin!');
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -655,7 +681,7 @@ export default function App({ initialShopSlug }: AppProps) {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="flex items-center gap-2.5 text-emerald-400 text-xs font-semibold tracking-wide">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-          Memuat Platform TebarAlat...
+          Memuat Platform Sebaraja...
         </div>
       </div>
     );
@@ -720,7 +746,7 @@ export default function App({ initialShopSlug }: AppProps) {
               setSearchQuery={setSearchQuery}
               selectedCategory={selectedCategory}
               setSelectedCategory={setSelectedCategory}
-              categories={CATEGORIES}
+              categories={catalogCategories}
               cart={cart}
               onUpdateCartQty={updateCartQty}
               onOpenWhatsApp={handleOpenWhatsApp}
@@ -809,6 +835,8 @@ export default function App({ initialShopSlug }: AppProps) {
         form={newItemForm}
         setForm={setNewItemForm}
         onSubmit={handleAddNewItem}
+        categories={selectableCategories}
+        shopSlug={shop?.slug}
       />
 
       <QrModal

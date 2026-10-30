@@ -22,6 +22,7 @@ export interface Shop {
     name: string;
     slug: string;
   };
+  logoUrl?: string;
 }
 
 export interface RentalItem {
@@ -39,6 +40,7 @@ export interface RentalItem {
   lastUpdatedBy: string;
   specs: string[];
   imageBg: string;
+  imageUrl?: string;
 }
 
 export interface ActivityLog {

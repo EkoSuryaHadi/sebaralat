@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `Katalog Rental - TebarAlat`,
+    title: `Katalog Rental - Sebaraja`,
     description: 'Katalog resmi penyewaan alat dan perlengkapan.',
   };
 }
