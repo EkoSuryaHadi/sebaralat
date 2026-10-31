@@ -410,7 +410,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div>
                   <span className="text-xs font-bold uppercase text-emerald-400">Bisnis PRO</span>
                   <div className="flex items-baseline gap-1 mt-1">
-                    <h3 className="text-2xl sm:text-3xl font-black text-white">Rp 19.000</h3>
+                    <h3 className="text-2xl sm:text-3xl font-black text-white">Rp 23.000</h3>
                     <span className="text-xs text-slate-400">/ bulan</span>
                   </div>
                   <p className="text-xs text-emerald-300/90">Atau hemat Rp 149.000 / tahun</p>

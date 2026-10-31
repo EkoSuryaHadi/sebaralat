@@ -15,6 +15,8 @@ export interface Shop {
   whatsapp: string;
   isVerified?: boolean;
   plan?: 'FREE' | 'PRO';
+  proExpiresAt?: string | null;
+  billingCycle?: 'monthly' | 'yearly' | null;
   terms: string[];
   partnerShop?: {
     name: string;

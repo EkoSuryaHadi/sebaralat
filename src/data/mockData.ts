@@ -10,8 +10,8 @@ export const DEFAULT_SHOPS: Shop[] = [
     mapsUrl: 'https://maps.google.com',
     hours: '08.00 - 21.00 WITA',
     whatsapp: '6281234567890',
-    isVerified: true,
-    plan: 'PRO',
+    isVerified: false,
+    plan: 'FREE',
     terms: [
       'Wajib meninggalkan E-KTP asli domisili aktif sebagai jaminan.',
       'Pelunasan dilakukan saat pengambilan unit (Tersedia QRIS & Transfer Bank).',

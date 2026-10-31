@@ -28,6 +28,7 @@ import {
   BadgeCheck,
 } from 'lucide-react';
 import { Shop, RentalItem, DurationOption, Role } from '../types';
+import { isProPlanActive } from '../lib/validators';
 
 interface CatalogViewProps {
   shop: Shop;
@@ -128,6 +129,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     return item.category === selectedCategory;
   });
 
+  const isPro = isProPlanActive(shop) || Boolean(shop.isVerified);
+
   return (
     <div className="pb-28 bg-slate-50 min-h-screen">
       {/* HEADER RESMI TOKO RENTAL */}
@@ -150,10 +153,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  <BadgeCheck className="w-3 h-3 text-emerald-400" />
-                  Official Partner
-                </span>
+                {isPro ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider bg-linear-to-r from-emerald-500/25 to-teal-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-400/40 shadow-xs">
+                    <BadgeCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    Official Partner
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-300 bg-white/10 px-2 py-0.5 rounded-full">
+                    Katalog Rental
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-1 text-[10px] text-slate-300 bg-white/10 px-2 py-0.5 rounded-full">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                   Live Stok
@@ -499,19 +508,27 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       {/* FOOTER & AKSES INTERNAL */}
       <div className="mt-10 mb-6 px-4 text-center space-y-3">
         <div className="border-t border-slate-200 pt-5 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-            <Image src="/logo.svg" alt="Sebaraja" width={110} height={28} className="h-5 w-auto object-contain" />
-            <span>Powered by Sebaraja</span>
-          </div>
-          <p className="text-[11px] text-slate-400">
-            Sistem Katalog & Manajemen Status Inventaris Real-Time
-          </p>
+          {!isPro ? (
+            <>
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                <Image src="/logo.svg" alt="Sebaraja" width={110} height={28} className="h-5 w-auto object-contain" />
+                <span>Powered by SebarAlat</span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Katalog digital & manajemen stok gratis dari SebarAlat
+              </p>
+            </>
+          ) : (
+            <p className="text-[11px] text-slate-400 font-medium">
+              Katalog Resmi • Layanan Terverifikasi
+            </p>
+          )}
 
           <div className="flex items-center justify-center gap-3 mt-2">
             {currentRole === 'customer' ? (
               <button
                 onClick={onOpenAuthModal}
-                className="text-[11px] font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-slate-200/60 transition"
+                className="text-[11px] font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
               >
                 <Lock className="w-3 h-3" />
                 <span>Login Staf / Owner</span>
@@ -519,20 +536,23 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             ) : (
               <button
                 onClick={onOpenWorkspace}
-                className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200"
+                className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
               >
                 Buka Panel Kerja ({currentRole.toUpperCase()}) →
               </button>
             )}
 
-            <span className="text-slate-300">•</span>
-
-            <button
-              onClick={onNavigateHome}
-              className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 transition"
-            >
-              Daftarkan Usaha Rental Anda
-            </button>
+            {!isPro && (
+              <>
+                <span className="text-slate-300">•</span>
+                <button
+                  onClick={onNavigateHome}
+                  className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 transition cursor-pointer"
+                >
+                  Daftarkan Usaha Rental Anda
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

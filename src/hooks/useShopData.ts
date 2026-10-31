@@ -72,7 +72,7 @@ export function useShopData(params: {
         client
           .from('shops')
           .select(
-            'slug, name, tagline, category_type, location, maps_url, hours, whatsapp, is_verified, plan, terms, partner_shop, logo_url'
+            'slug, name, tagline, category_type, location, maps_url, hours, whatsapp, is_verified, plan, pro_expires_at, billing_cycle, terms, partner_shop, logo_url'
           )
           .limit(50),
         client
@@ -625,6 +625,21 @@ export function useShopData(params: {
     triggerToast(`Undangan ${role.toUpperCase()} untuk ${email} berhasil dibuat!`);
   };
 
+  const updateShopPlanLocally = (
+    slug: string,
+    plan: 'FREE' | 'PRO',
+    billingCycle: 'monthly' | 'yearly' | null = null,
+    proExpiresAt: string | null = null
+  ) => {
+    setShops((prev) =>
+      prev.map((s) =>
+        s.slug === slug
+          ? { ...s, plan, billingCycle, proExpiresAt }
+          : s
+      )
+    );
+  };
+
   return {
     cloudSynced,
     shops,
@@ -638,6 +653,7 @@ export function useShopData(params: {
     deleteItemFromCloud,
     adjustItemStock,
     saveShopToCloud,
+    updateShopPlanLocally,
     createShopAtomically,
     createBookingOrder,
     updateBookingStatus,

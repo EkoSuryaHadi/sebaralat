@@ -19,6 +19,9 @@ import {
   NewItemSchema,
   CreateBookingSchema,
   InviteMemberSchema,
+  canAddRentalItem,
+  isProPlanActive,
+  STARTER_MAX_ITEMS,
 } from '@/lib/validators';
 import { useToast } from '@/hooks/useToast';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -31,6 +34,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { WaPreviewModal } from '@/components/WaPreviewModal';
 import { AddItemModal, NewItemFormState } from '@/components/AddItemModal';
 import { QrModal } from '@/components/QrModal';
+import { UpgradeModal } from '@/components/UpgradeModal';
 
 export interface AppShellProps {
   initialShopSlug?: string;
@@ -93,6 +97,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     deleteItemFromCloud,
     adjustItemStock,
     saveShopToCloud,
+    updateShopPlanLocally,
     createShopAtomically,
     createBookingOrder,
     updateBookingStatus,
@@ -110,6 +115,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   const [adminSearch, setAdminSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedQrItem, setSelectedQrItem] = useState<RentalItem | null>(null);
 
   const [newItemForm, setNewItemForm] = useState<NewItemFormState>({
@@ -376,6 +382,12 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     }
     if (currentRole !== 'owner') {
       throw new Error('Akses Ditolak: Hanya Owner yang dapat menambah unit baru.');
+    }
+
+    if (!canAddRentalItem(shop, items.length)) {
+      setShowAddModal(false);
+      setShowUpgradeModal(true);
+      throw new Error(`Batas paket Starter tercapai (maksimal ${STARTER_MAX_ITEMS} unit alat). Silakan upgrade ke Bisnis PRO.`);
     }
 
     const parsed = NewItemSchema.safeParse(formData);
@@ -692,6 +704,8 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               triggerToast={triggerToast}
               onSwitchToOwnerLogin={() => setShowAuthModal(true)}
               formatRp={formatRp}
+              allItemsCount={items.length}
+              onOpenUpgradeModal={() => setShowUpgradeModal(true)}
             />
           )}
         </div>

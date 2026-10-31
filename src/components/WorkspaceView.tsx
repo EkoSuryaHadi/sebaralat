@@ -21,6 +21,8 @@ import {
   CalendarCheck,
   UserPlus,
   Mail,
+  Sparkles,
+  Lock,
 } from 'lucide-react';
 import {
   Shop,
@@ -34,6 +36,7 @@ import {
   ShopInvite,
 } from '../types';
 import { uploadShopLogo } from '@/lib/imageUtils';
+import { isProPlanActive, STARTER_MAX_ITEMS } from '../lib/validators';
 
 interface WorkspaceViewProps {
   shop: Shop;
@@ -65,6 +68,8 @@ interface WorkspaceViewProps {
   triggerToast: (msg: string) => void;
   onSwitchToOwnerLogin: () => void;
   formatRp: (num: number) => string;
+  allItemsCount?: number;
+  onOpenUpgradeModal?: () => void;
 }
 
 export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
@@ -93,7 +98,10 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   triggerToast,
   onSwitchToOwnerLogin,
   formatRp,
+  allItemsCount = 0,
+  onOpenUpgradeModal,
 }) => {
+  const isPro = isProPlanActive(shop) || Boolean(shop.isVerified);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUrlMode, setIsUrlMode] = useState(false);
   const [logoUrlInput, setLogoUrlInput] = useState('');
@@ -254,7 +262,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             {currentRole === 'owner' && (
               <button
                 onClick={onOpenAddModal}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 shrink-0"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
               >
                 <PackagePlus className="w-4 h-4" />
                 <span>+ Tambah Unit</span>
@@ -271,6 +279,40 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
+          </div>
+
+          {/* Kuota & Status Inventaris Paket */}
+          <div className="flex items-center justify-between text-xs px-1 py-0.5">
+            {!isPro ? (
+              <>
+                <span className="text-[11px] font-bold text-slate-500">
+                  Katalog:{' '}
+                  <strong className={allItemsCount >= STARTER_MAX_ITEMS ? 'text-amber-600' : 'text-slate-800'}>
+                    {allItemsCount} / {STARTER_MAX_ITEMS} Unit
+                  </strong>{' '}
+                  (Starter)
+                </span>
+                {allItemsCount >= STARTER_MAX_ITEMS ? (
+                  <button
+                    type="button"
+                    onClick={onOpenUpgradeModal}
+                    className="text-[11px] font-extrabold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Upgrade Unlimited PRO</span>
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-slate-400">
+                    Sisa kuota: {Math.max(0, STARTER_MAX_ITEMS - allItemsCount)} unit
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-[11px] font-extrabold text-emerald-700 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Katalog: {allItemsCount} Unit (Bisnis PRO Unlimited)</span>
+              </span>
+            )}
           </div>
 
           {/* Daftar Kartu Kontrol Unit */}
@@ -529,41 +571,69 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       {/* SUB-TAB 2: LOG RIWAYAT AKTIVITAS (AUDIT TRAIL) */}
       {workspaceTab === 'logs' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-900">
-                Riwayat Perubahan Status & Stok
-              </h3>
-              <p className="text-[11px] text-slate-500">
-                Memantau aktivitas Staf Gudang & Owner secara transparan
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            {shopLogs.map((log) => (
-              <div
-                key={log.id}
-                className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start justify-between gap-2"
-              >
-                <div className="space-y-0.5">
-                  <span
-                    className={`inline-block text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
-                      log.actorRole.includes('Owner')
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}
-                  >
-                    {log.actorRole}
-                  </span>
-                  <p className="text-xs font-semibold text-slate-800">{log.action}</p>
-                </div>
-                <span className="text-[10px] text-slate-400 whitespace-nowrap">
-                  {log.time}
-                </span>
+          {!isPro ? (
+            <div className="bg-linear-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 text-center text-white space-y-3 shadow-md">
+              <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+                <Lock className="w-5 h-5" />
               </div>
-            ))}
-          </div>
+              <div className="space-y-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                  Fitur Bisnis PRO
+                </span>
+                <h3 className="text-base font-black text-white mt-2">
+                  Audit Trail Log Aktivitas Operasional
+                </h3>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                  Pantau jam berapa staf gudang mengubah status unit, mencatat nama peminjam, atau mengupdate profil inventaris dengan akurat.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenUpgradeModal}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs px-5 py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition cursor-pointer"
+              >
+                Buka Akses Log (Upgrade PRO Mulai Rp 23rb)
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    Riwayat Perubahan Status & Stok
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Memantau aktivitas Staf Gudang & Owner secara transparan
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                {shopLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start justify-between gap-2"
+                  >
+                    <div className="space-y-0.5">
+                      <span
+                        className={`inline-block text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
+                          log.actorRole.includes('Owner')
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {log.actorRole}
+                      </span>
+                      <p className="text-xs font-semibold text-slate-800">{log.action}</p>
+                    </div>
+                    <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                      {log.time}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -577,6 +647,43 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               <p className="text-[11px] text-slate-500">
                 Hanya Owner yang dapat mengubah informasi bisnis dan mengundang Staf Gudang via email.
               </p>
+            </div>
+
+            {/* Status Paket & Langganan Toko */}
+            <div className="p-4 rounded-2xl bg-linear-to-br from-slate-900 to-slate-950 border border-slate-800 text-white space-y-3 shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isPro ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-300'}`}>
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black">
+                        {isPro ? 'Paket Bisnis PRO' : 'Paket Starter (Gratis)'}
+                      </span>
+                      <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${isPro ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-slate-200'}`}>
+                        {isPro ? 'Aktif' : 'Gratis'}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {isPro
+                        ? `Unlimited stok • Bebas watermark • Staf & Log aktif${shop.billingCycle ? ` (${shop.billingCycle === 'yearly' ? 'Tahunan' : 'Bulanan'})` : ''}`
+                        : `Maksimal 8 unit alat (${allItemsCount}/8 terpakai)`}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onOpenUpgradeModal}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    isPro
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-md shadow-emerald-500/20'
+                  }`}
+                >
+                  {isPro ? 'Info Paket PRO' : 'Upgrade ke PRO'}
+                </button>
+              </div>
             </div>
 
             {/* Upload Logo Usaha / Brand Toko */}
@@ -772,70 +879,95 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
               {/* Manajemen Anggota & Undangan Email Staf Gudang (Menggantikan PIN Plaintext) */}
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                <div>
-                  <span className="text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
-                    Undang Staf Gudang / Co-Owner via Email
-                  </span>
-                  <p className="text-[10px] text-slate-500 mt-0.5">
-                    Staf yang diundang cukup login dengan alamat emailnya menggunakan Magic Link / OTP untuk langsung mendapatkan akses operasional gudang.
-                  </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="relative flex-1">
-                    <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="email"
-                      placeholder="staf.gudang@email.com"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      className="w-full pl-8 pr-2.5 py-2 text-xs bg-white border border-slate-300 rounded-xl"
-                    />
-                  </div>
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as 'staff' | 'owner')}
-                    className="text-xs font-bold bg-white border border-slate-300 rounded-xl px-2.5 py-2"
-                  >
-                    <option value="staff">Staf Gudang</option>
-                    <option value="owner">Co-Owner</option>
-                  </select>
-                  <button
-                    type="button"
-                    disabled={isInviting || !inviteEmail.trim()}
-                    onClick={async () => {
-                      setIsInviting(true);
-                      try {
-                        await onInviteMember(inviteEmail.trim(), inviteRole);
-                        setInviteEmail('');
-                      } finally {
-                        setIsInviting(false);
-                      }
-                    }}
-                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2 rounded-xl shrink-0"
-                  >
-                    {isInviting ? 'Mengundang...' : 'Undang'}
-                  </button>
-                </div>
-
-                {invites.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[10px] font-bold uppercase text-slate-400">
-                      Daftar Undangan Akses ({invites.length})
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5">
+                      <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+                      Undang Staf Gudang / Co-Owner via Email
                     </span>
-                    {invites.map((inv) => (
-                      <div
-                        key={inv.id}
-                        className="flex items-center justify-between text-[11px] bg-white border border-slate-200 rounded-lg px-2.5 py-1.5"
-                      >
-                        <span className="font-mono text-slate-700 truncate">{inv.email}</span>
-                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                          {inv.role} • {inv.acceptedAt ? 'Aktif' : 'Menunggu Login'}
-                        </span>
-                      </div>
-                    ))}
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      Staf yang diundang cukup login dengan alamat emailnya menggunakan Magic Link / OTP untuk langsung mendapatkan akses operasional gudang.
+                    </p>
                   </div>
+                  {!isPro && (
+                    <span className="text-[9px] font-extrabold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                      Fitur PRO
+                    </span>
+                  )}
+                </div>
+
+                {!isPro ? (
+                  <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+                    <div className="text-xs text-amber-900 flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Upgrade ke <strong>Bisnis PRO</strong> untuk mendelegasikan kontrol staf gudang via email.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onOpenUpgradeModal}
+                      className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow-xs cursor-pointer"
+                    >
+                      Buka Akses Staf
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="relative flex-1">
+                        <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="email"
+                          placeholder="staf.gudang@email.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          className="w-full pl-8 pr-2.5 py-2 text-xs bg-white border border-slate-300 rounded-xl"
+                        />
+                      </div>
+                      <select
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value as 'staff' | 'owner')}
+                        className="text-xs font-bold bg-white border border-slate-300 rounded-xl px-2.5 py-2"
+                      >
+                        <option value="staff">Staf Gudang</option>
+                        <option value="owner">Co-Owner</option>
+                      </select>
+                      <button
+                        type="button"
+                        disabled={isInviting || !inviteEmail.trim()}
+                        onClick={async () => {
+                          setIsInviting(true);
+                          try {
+                            await onInviteMember(inviteEmail.trim(), inviteRole);
+                            setInviteEmail('');
+                          } finally {
+                            setIsInviting(false);
+                          }
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2 rounded-xl shrink-0"
+                      >
+                        {isInviting ? 'Mengundang...' : 'Undang'}
+                      </button>
+                    </div>
+
+                    {invites.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">
+                          Daftar Undangan Akses ({invites.length})
+                        </span>
+                        {invites.map((inv) => (
+                          <div
+                            key={inv.id}
+                            className="flex items-center justify-between text-[11px] bg-white border border-slate-200 rounded-lg px-2.5 py-1.5"
+                          >
+                            <span className="font-mono text-slate-700 truncate">{inv.email}</span>
+                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                              {inv.role} • {inv.acceptedAt ? 'Aktif' : 'Menunggu Login'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

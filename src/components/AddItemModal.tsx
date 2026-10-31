@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, X, Link2, Loader2, PlusCircle, AlertCircle } from 'lucide-react';
+import { Upload, X, Link2, Loader2, PlusCircle, AlertCircle, Sparkles } from 'lucide-react';
 import { uploadItemImage } from '@/lib/imageUtils';
 
 export interface NewItemFormState {
@@ -23,6 +23,8 @@ interface AddItemModalProps {
   onSubmit: (formData: NewItemFormState) => Promise<void> | void;
   categories?: string[];
   shopSlug?: string;
+  isLimitReached?: boolean;
+  onOpenUpgradeModal?: () => void;
 }
 
 export const AddItemModal: React.FC<AddItemModalProps> = ({
@@ -33,6 +35,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   onSubmit,
   categories = ['Camping', 'Alat Teknik/Proyek', 'Kamera & Audio'],
   shopSlug = 'general',
+  isLimitReached = false,
+  onOpenUpgradeModal,
 }) => {
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryInput, setCustomCategoryInput] = useState('');
@@ -44,6 +48,48 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
+
+  if (isLimitReached) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-2xl text-center">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+              Batas Paket Starter Tercapai (8/8 Unit)
+            </span>
+            <h3 className="text-base font-black text-slate-900 mt-2">
+              Upgrade ke Bisnis PRO untuk Tambah Unit Tanpa Batas
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Paket Starter gratis dibatasi hingga 8 unit barang di katalog. Mulai Rp 23.000/bln, nikmati unlimited katalog, multi-staf gudang, dan QR cetak fisik.
+            </p>
+          </div>
+          <div className="space-y-2 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenUpgradeModal?.();
+              }}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-3 rounded-xl shadow-lg shadow-emerald-600/20 transition cursor-pointer"
+            >
+              Lihat Paket Bisnis PRO (Mulai Rp 23rb)
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleToggleCustom = () => {
     setFormError('');

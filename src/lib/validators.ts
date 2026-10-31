@@ -238,3 +238,55 @@ export const InviteMemberSchema = z.object({
   role: z.enum(['owner', 'staff']).default('staff'),
 });
 
+// =========================================================
+// ATURAN PAKET: STARTER VS BISNIS PRO
+// =========================================================
+
+export const STARTER_MAX_ITEMS = 8;
+export const SEBARALA_ADMIN_WA = '6281911821355'; // Hotline WhatsApp Resmi SebarAlat
+
+/**
+ * Cek apakah paket Bisnis PRO aktif dan belum melewati masa berlaku
+ */
+export function isProPlanActive(
+  shop?: { plan?: string | null; proExpiresAt?: string | null } | null
+): boolean {
+  if (!shop || shop.plan !== 'PRO') return false;
+  if (!shop.proExpiresAt) return true; // Tanpa batas waktu (Lifetime/Trial aktif)
+  const expires = new Date(shop.proExpiresAt).getTime();
+  if (Number.isNaN(expires)) return true;
+  return expires > Date.now();
+}
+
+/**
+ * Validasi apakah toko diizinkan menambah item katalog baru
+ */
+export function canAddRentalItem(
+  shop: { plan?: string | null; proExpiresAt?: string | null } | null | undefined,
+  currentItemCount: number
+): boolean {
+  if (isProPlanActive(shop)) {
+    return true; // PRO: Tanpa batas (Unlimited)
+  }
+  return currentItemCount < STARTER_MAX_ITEMS;
+}
+
+/**
+ * Format pesan WhatsApp otomatis untuk pengajuan upgrade ke Bisnis PRO
+ */
+export function formatUpgradeWhatsappMessage(
+  shop: { slug: string; name: string },
+  cycle: 'monthly' | 'yearly'
+): string {
+  const packageName = cycle === 'yearly' ? 'Bisnis PRO Tahunan (Rp 149.000 / thn)' : 'Bisnis PRO Bulanan (Rp 23.000 / bln)';
+  return (
+    `Halo Tim SebarAlat! 👋\n\n` +
+    `Saya ingin mengajukan upgrade ke paket *${packageName}* untuk toko rental saya:\n\n` +
+    `🏪 *Nama Toko:* ${shop.name}\n` +
+    `🔗 *Link Katalog:* sebaraja.com/${shop.slug}\n` +
+    `📅 *Siklus Langganan:* ${cycle === 'yearly' ? 'Tahunan (Hemat 46%)' : 'Bulanan'}\n\n` +
+    `Mohon info rekening atau QRIS resmi SebarAlat untuk aktivasi toko saya. Terima kasih!`
+  );
+}
+
+

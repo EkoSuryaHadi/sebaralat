@@ -57,6 +57,8 @@ export interface ShopDbRow {
   whatsapp: string;
   is_verified?: boolean | null;
   plan?: 'FREE' | 'PRO' | string | null;
+  pro_expires_at?: string | null;
+  billing_cycle?: string | null;
   terms?: string[] | null;
   partner_shop?: { name: string; slug: string } | null;
   logo_url?: string | null;
@@ -164,12 +166,14 @@ export const mapShopFromDb = (row: ShopDbRow): Shop => ({
   whatsapp: row.whatsapp,
   isVerified: Boolean(row.is_verified),
   plan: row.plan === 'PRO' ? 'PRO' : 'FREE',
+  proExpiresAt: row.pro_expires_at || null,
+  billingCycle: row.billing_cycle === 'yearly' || row.billing_cycle === 'monthly' ? row.billing_cycle : null,
   terms: Array.isArray(row.terms) ? row.terms : [],
   partnerShop: row.partner_shop || undefined,
   logoUrl: row.logo_url || '',
 });
 
-export const mapShopToDb = (shop: Shop): Omit<ShopDbRow, 'is_verified' | 'plan' | 'created_at' | 'updated_at'> => ({
+export const mapShopToDb = (shop: Shop): Omit<ShopDbRow, 'is_verified' | 'plan' | 'pro_expires_at' | 'billing_cycle' | 'created_at' | 'updated_at'> => ({
   slug: shop.slug,
   name: shop.name,
   tagline: shop.tagline || '',
