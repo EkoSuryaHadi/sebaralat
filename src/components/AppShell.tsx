@@ -75,7 +75,9 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const {
     user,
+    memberships,
     currentRole,
+    authLoading,
     sendEmailOtp,
     verifyEmailOtp,
     signOut,
@@ -114,8 +116,8 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   // Workspace State
   const [adminSearch, setAdminSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showQrModal, setShowQrModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [selectedQrItem, setSelectedQrItem] = useState<RentalItem | null>(null);
 
   const [newItemForm, setNewItemForm] = useState<NewItemFormState>({
@@ -182,6 +184,16 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [setDevSimulatedRole]);
+
+  // Jika user sudah terautentikasi dan memiliki toko terdaftar saat membuka root (/), langsung alihkan ke panel tokonya
+  useEffect(() => {
+    if (!initialShopSlug && !authLoading && user && memberships.length > 0) {
+      const targetSlug = memberships[0].shopSlug;
+      if (typeof window !== 'undefined') {
+        window.location.replace(`/${targetSlug}?view=workspace`);
+      }
+    }
+  }, [initialShopSlug, authLoading, user, memberships]);
 
   const currentDurationObj = useMemo(() => {
     return (
@@ -548,10 +560,30 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleVerifyOtpInApp = async (email: string, token: string) => {
+    const res = await verifyEmailOtp(email, token);
+    if (!res.error) {
+      setShowAuthModal(false);
+      const userShop = res.memberships?.[0]?.shopSlug || activeShopSlug;
+      if (userShop) {
+        setActiveShopSlug(userShop);
+      }
+      setViewMode('workspace');
+      setWorkspaceTab('inventory');
+      triggerToast('Login berhasil! Selamat datang di Panel Pengelola.');
+    }
+    return res;
+  };
+
   const handleLogoutRole = async () => {
     await signOut();
-    setViewMode('catalog');
-    triggerToast('Berhasil keluar. Kembali ke tampilan Katalog Publik.');
+    if (initialShopSlug) {
+      setViewMode('catalog');
+      triggerToast('Berhasil keluar. Kembali ke tampilan Katalog Publik.');
+    } else {
+      setViewMode('saas_home');
+      triggerToast('Berhasil keluar.');
+    }
   };
 
   if (!mounted) {
@@ -561,6 +593,20 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
           Memuat Platform Sebaraja...
         </div>
+      </div>
+    );
+  }
+
+  // Tampilan transisi loading jika user sudah login dan sedang dialihkan ke tokonya dari root
+  if (!initialShopSlug && user && memberships.length > 0) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-3 text-white">
+        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center animate-spin">
+          <Sparkles className="w-5 h-5" />
+        </div>
+        <p className="text-xs text-slate-300">
+          Mengalihkan ke Panel Toko <span className="font-mono text-emerald-400 font-bold">/{memberships[0].shopSlug}</span>...
+        </p>
       </div>
     );
   }
@@ -719,7 +765,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
             shopName={shop.name}
             userEmail={user?.email}
             onSendEmailOtp={sendEmailOtp}
-            onVerifyEmailOtp={verifyEmailOtp}
+            onVerifyEmailOtp={handleVerifyOtpInApp}
             onDevSimulateRole={(role) => {
               setDevSimulatedRole(role);
               setViewMode('workspace');
@@ -762,9 +808,19 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               setShowQrModal(false);
             }}
           />
+
+          <UpgradeModal
+            isOpen={showUpgradeModal}
+            onClose={() => setShowUpgradeModal(false)}
+            shop={shop}
+            onSimulateUpgrade={async (cycle) => {
+              if (updateShopPlanLocally) {
+                const days = cycle === 'yearly' ? 365 : 30; const expires = new Date(Date.now() + days * 86400000).toISOString(); updateShopPlanLocally(shop.slug, 'PRO', cycle, expires);
+              }
+            }}
+          />
         </>
       )}
     </div>
   );
 }
-

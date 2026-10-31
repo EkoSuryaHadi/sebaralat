@@ -17,19 +17,26 @@ export function useAuthSession(activeShopSlug?: string) {
   // Hanya tersedia pada mode pengembangan lokal ketika Supabase tidak dikonfigurasi
   const [devSimulatedRole, setDevSimulatedRole] = useState<Role>('customer');
 
-  const fetchMemberships = useCallback(async (uid: string) => {
-    if (!supabase) return;
-    // Klaim undangan staf yang tertunda berdasarkan email user yang login
-    await supabase.rpc('claim_my_invites');
+  const fetchMemberships = useCallback(async (uid: string): Promise<ShopMember[]> => {
+    if (!supabase) return [];
+    try {
+      // Klaim undangan staf yang tertunda berdasarkan email user yang login
+      await supabase.rpc('claim_my_invites');
 
-    const { data, error } = await supabase
-      .from('shop_members')
-      .select('shop_slug, user_id, email, role, created_at')
-      .eq('user_id', uid);
+      const { data, error } = await supabase
+        .from('shop_members')
+        .select('shop_slug, user_id, email, role, created_at')
+        .eq('user_id', uid);
 
-    if (!error && data) {
-      setMemberships((data as ShopMemberDbRow[]).map(mapMemberFromDb));
+      if (!error && data) {
+        const mapped = (data as ShopMemberDbRow[]).map(mapMemberFromDb);
+        setMemberships(mapped);
+        return mapped;
+      }
+    } catch (err) {
+      console.error('Gagal mengambil data keanggotaan toko:', err);
     }
+    return [];
   }, []);
 
   useEffect(() => {
@@ -52,9 +59,11 @@ export function useAuthSession(activeShopSlug?: string) {
       const nextUser = session?.user ?? null;
       setUser(nextUser);
       if (nextUser) {
-        fetchMemberships(nextUser.id);
+        setAuthLoading(true);
+        fetchMemberships(nextUser.id).finally(() => setAuthLoading(false));
       } else {
         setMemberships([]);
+        setAuthLoading(false);
       }
     });
 
@@ -107,7 +116,7 @@ export function useAuthSession(activeShopSlug?: string) {
   const verifyEmailOtp = async (
     email: string,
     token: string
-  ): Promise<{ error?: string }> => {
+  ): Promise<{ error?: string; memberships?: ShopMember[] }> => {
     if (!supabase) {
       return { error: 'Supabase belum dikonfigurasi.' };
     }
@@ -127,7 +136,9 @@ export function useAuthSession(activeShopSlug?: string) {
       return { error: error.message };
     }
     if (data.user) {
-      await fetchMemberships(data.user.id);
+      setUser(data.user);
+      const list = await fetchMemberships(data.user.id);
+      return { memberships: list };
     }
     return {};
   };
@@ -149,8 +160,7 @@ export function useAuthSession(activeShopSlug?: string) {
     sendEmailOtp,
     verifyEmailOtp,
     signOut,
-    refreshMemberships: () => (user ? fetchMemberships(user.id) : Promise.resolve()),
+    refreshMemberships: () => (user ? fetchMemberships(user.id) : Promise.resolve([])),
     setDevSimulatedRole,
   };
 }
-

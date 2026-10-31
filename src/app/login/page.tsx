@@ -46,6 +46,7 @@ function LoginFormContent() {
   const [otpInput, setOtpInput] = useState('');
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [loading, setLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
 
@@ -68,6 +69,24 @@ function LoginFormContent() {
     router.push(target);
   };
 
+  // Auto redirect begitu user terdeteksi login dan data toko selesai dimuat
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (user) {
+      if (redirectParam) {
+        setIsRedirecting(true);
+        handleProceed(redirectParam);
+      } else if (shopParam) {
+        setIsRedirecting(true);
+        handleProceed(`/${shopParam}?view=workspace`);
+      } else if (memberships.length > 0) {
+        setIsRedirecting(true);
+        handleProceed(`/${memberships[0].shopSlug}?view=workspace`);
+      }
+    }
+  }, [user, authLoading, memberships, redirectParam, shopParam]);
+
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -76,7 +95,7 @@ function LoginFormContent() {
 
     try {
       // Path callback saat magic link diklik di email
-      const callbackPath = redirectParam || (shopParam ? `/${shopParam}` : '/login');
+      const callbackPath = redirectParam || (shopParam ? `/${shopParam}?view=workspace` : '/login');
       const res = await sendEmailOtp(emailInput, callbackPath);
 
       if (res.error) {
@@ -102,11 +121,17 @@ function LoginFormContent() {
       if (res.error) {
         setErrorMsg(res.error);
       } else {
-        // Berhasil login: arahkan ke redirect param atau toko pertama
+        setIsRedirecting(true);
+        // Berhasil login: langsung arahkan ke workspace toko
         if (redirectParam) {
           handleProceed(redirectParam);
         } else if (shopParam) {
-          handleProceed(`/${shopParam}`);
+          handleProceed(`/${shopParam}?view=workspace`);
+        } else if (res.memberships && res.memberships.length > 0) {
+          handleProceed(`/${res.memberships[0].shopSlug}?view=workspace`);
+        } else {
+          // Jika belum punya toko terdaftar
+          handleProceed('/#daftar-toko');
         }
       }
     } finally {
@@ -122,6 +147,37 @@ function LoginFormContent() {
     const target = redirectParam || `/${slug}?view=workspace`;
     handleProceed(target);
   };
+
+  // Tampilan transisi loading jika sedang dialihkan ke toko
+  if (isRedirecting || (user && memberships.length > 0)) {
+    const targetShop = shopParam || (memberships.length > 0 ? memberships[0].shopSlug : '');
+    return (
+      <div className="w-full max-w-md mx-auto">
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl shadow-2xl text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <Loader2 className="w-7 h-7 animate-spin" />
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-white">Login Berhasil!</h2>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+              Sedang mengalihkan Anda langsung ke Panel Toko{' '}
+              {targetShop && <strong className="text-emerald-400 font-mono">/{targetShop}</strong>}...
+            </p>
+          </div>
+          <p className="text-[11px] text-slate-500">
+            Jika halaman tidak berpindah otomatis dalam beberapa detik,{' '}
+            <button
+              onClick={() => handleProceed(targetShop ? `/${targetShop}?view=workspace` : '/')}
+              className="text-emerald-400 underline font-bold"
+            >
+              klik di sini
+            </button>
+            .
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -143,8 +199,8 @@ function LoginFormContent() {
           </p>
         </div>
 
-        {/* JIKA SUDAH TERAUTENTIKASI (USER SUDAH LOGIN) */}
-        {user ? (
+        {/* JIKA SUDAH TERAUTENTIKASI TETAPI BELUM MEMILIKI TOKO */}
+        {user && !authLoading && memberships.length === 0 ? (
           <div className="space-y-5">
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2.5 text-emerald-300">
@@ -155,66 +211,19 @@ function LoginFormContent() {
                 </div>
               </div>
 
-              {memberships.length > 0 ? (
-                <div className="pt-2 border-t border-emerald-500/20 space-y-2">
-                  <span className="text-[11px] font-bold text-emerald-300 block">
-                    Toko Terdaftar Anda:
-                  </span>
-                  <div className="space-y-1.5">
-                    {memberships.map((m) => (
-                      <div
-                        key={m.shopSlug}
-                        className="bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between gap-2"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Store className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span className="text-xs font-mono font-bold text-slate-200">
-                            /{m.shopSlug}
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 capitalize">
-                          {m.role === 'owner' ? 'Owner' : 'Staf Gudang'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[11px] text-slate-400">
-                  Akun Anda belum terikat ke toko rental manapun. Buat toko pertama Anda sekarang.
-                </p>
-              )}
+              <p className="text-xs text-slate-300 pt-1 leading-relaxed">
+                Akun Anda belum terikat ke toko rental manapun. Silakan daftarkan toko rental perdana Anda sekarang.
+              </p>
             </div>
 
-            {/* TOMBOL TINDAKAN LANJUTAN */}
             <div className="space-y-2.5 pt-2">
-              {redirectParam ? (
-                <button
-                  type="button"
-                  onClick={() => handleProceed()}
-                  className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition"
-                >
-                  <span>Lanjutkan ke Halaman Tujuan</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              ) : memberships.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => handleProceed(`/${memberships[0].shopSlug}?view=workspace`)}
-                  className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition"
-                >
-                  <Store className="w-4 h-4" />
-                  <span>Buka Workspace /{memberships[0].shopSlug}</span>
-                </button>
-              ) : (
-                <Link
-                  href="/#daftar-toko"
-                  className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Daftarkan Toko Rental Baru</span>
-                </Link>
-              )}
+              <Link
+                href="/#daftar-toko"
+                className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Daftarkan Toko Rental Baru</span>
+              </Link>
 
               <button
                 type="button"
@@ -224,7 +233,7 @@ function LoginFormContent() {
                   setOtpInput('');
                   setInfoMsg('');
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition"
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition cursor-pointer"
               >
                 <LogOut className="w-4 h-4 text-rose-400" />
                 <span>Ganti Akun / Keluar</span>
@@ -333,14 +342,14 @@ function LoginFormContent() {
                 </div>
 
                 <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400 truncate max-w-50">{emailInput}</span>
+                  <span className="text-slate-400 truncate max-w-[200px]">{emailInput}</span>
                   <button
                     type="button"
                     onClick={() => {
                       setStep('email');
                       setErrorMsg('');
                     }}
-                    className="text-emerald-400 hover:text-emerald-300 font-bold underline"
+                    className="text-emerald-400 hover:text-emerald-300 font-bold underline cursor-pointer"
                   >
                     Ganti Email
                   </button>
@@ -388,7 +397,7 @@ function LoginFormContent() {
                   type="button"
                   onClick={handleRequestOtp}
                   disabled={loading}
-                  className="w-full py-2 text-center text-[11px] font-bold text-slate-400 hover:text-slate-200 transition"
+                  className="w-full py-2 text-center text-[11px] font-bold text-slate-400 hover:text-slate-200 transition cursor-pointer"
                 >
                   Belum terima email? Kirim ulang
                 </button>
@@ -407,7 +416,7 @@ function LoginFormContent() {
                 <button
                   type="button"
                   onClick={() => handleDevLogin('owner', shopParam || 'borneo-rental')}
-                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                   <span>Demo Owner</span>
@@ -415,7 +424,7 @@ function LoginFormContent() {
                 <button
                   type="button"
                   onClick={() => handleDevLogin('staff', shopParam || 'borneo-rental')}
-                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
                 >
                   <UserCheck className="w-3.5 h-3.5 text-teal-400" />
                   <span>Demo Staf</span>
@@ -482,4 +491,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
