@@ -7,6 +7,7 @@ import {
   ViewMode,
   WorkspaceTab,
   ItemStatus,
+  Role,
 } from '@/types';
 import { DURATION_OPTIONS } from '@/data/mockData';
 import {
@@ -576,6 +577,10 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   };
 
   const handleLogoutRole = async () => {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage?.removeItem('sebaraja_dev_role');
+    }
+    setDevSimulatedRole('customer');
     await signOut();
     if (initialShopSlug) {
       setViewMode('catalog');
@@ -584,6 +589,20 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       setViewMode('saas_home');
       triggerToast('Berhasil keluar.');
     }
+  };
+
+  const handleSwitchRole = (role: Role) => {
+    setDevSimulatedRole(role);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage?.setItem('sebaraja_dev_role', role);
+    }
+    setViewMode('workspace');
+    setWorkspaceTab('inventory');
+    triggerToast(
+      `Mode Demo: Masuk ke Workspace sebagai ${
+        role === 'owner' ? 'Owner Toko' : 'Staf Gudang'
+      }`
+    );
   };
 
   if (!mounted) {
@@ -649,12 +668,14 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
         <RoleBar
           currentRole={currentRole}
           shopName={shop.name}
+          shopSlug={shop.slug}
           userEmail={user?.email}
           viewMode={viewMode}
           onToggleViewMode={() =>
             setViewMode(viewMode === 'catalog' ? 'workspace' : 'catalog')
           }
           onLogout={handleLogoutRole}
+          onSwitchRole={handleSwitchRole}
         />
       )}
 
@@ -715,6 +736,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               }}
               onNavigateHome={navigateToLandingHome}
               formatRp={formatRp}
+              onSwitchRole={handleSwitchRole}
             />
           )}
 
@@ -768,6 +790,9 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
             onVerifyEmailOtp={handleVerifyOtpInApp}
             onDevSimulateRole={(role) => {
               setDevSimulatedRole(role);
+              if (typeof window !== 'undefined') {
+                window.sessionStorage?.setItem('sebaraja_dev_role', role);
+              }
               setViewMode('workspace');
               setWorkspaceTab('inventory');
               triggerToast(
@@ -815,7 +840,10 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
             shop={shop}
             onSimulateUpgrade={async (cycle) => {
               if (updateShopPlanLocally) {
-                const days = cycle === 'yearly' ? 365 : 30; const expires = new Date(Date.now() + days * 86400000).toISOString(); updateShopPlanLocally(shop.slug, 'PRO', cycle, expires);
+                const days = cycle === 'yearly' ? 365 : 30;
+                const expires = new Date(Date.now() + days * 86400000).toISOString();
+                updateShopPlanLocally(shop.slug, 'PRO', cycle, expires);
+                triggerToast('⚡ Mode Demo: Paket PRO berhasil diaktifkan untuk toko ini!');
               }
             }}
           />

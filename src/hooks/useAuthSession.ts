@@ -72,13 +72,12 @@ export function useAuthSession(activeShopSlug?: string) {
     };
   }, [fetchMemberships]);
 
-  // Role diturunkan dari tabel shop_members (server-verified), bukan state klien bebas
+  // Role diturunkan dari tabel shop_members jika terautentikasi riil; jika tidak ada (seperti mode demo/offline), gunakan peran simulasi devSimulatedRole
   const activeMembership = activeShopSlug
     ? memberships.find((m) => m.shopSlug === activeShopSlug)
     : undefined;
-  const currentRole: Role = isSupabaseConfigured
-    ? activeMembership?.role ?? 'customer'
-    : devSimulatedRole;
+  const currentRole: Role =
+    activeMembership?.role ?? devSimulatedRole;
 
   const sendEmailOtp = async (
     email: string,

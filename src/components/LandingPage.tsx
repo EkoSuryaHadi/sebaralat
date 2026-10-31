@@ -89,10 +89,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </Link>
             <button
               onClick={() => onSelectShop('borneo-rental')}
-              className="hidden sm:flex text-xs font-bold text-slate-200 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-xl transition items-center gap-1.5"
+              className="text-xs font-bold text-slate-200 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3 py-2 sm:px-3.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Coba Demo Toko</span>
+              <span>Demo Toko</span>
             </button>
             <a
               href="#daftar-toko"

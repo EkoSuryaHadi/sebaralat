@@ -85,13 +85,21 @@ export function useShopData(params: {
       ]);
 
       if (!shopsRes.error && shopsRes.data && shopsRes.data.length > 0) {
-        setShops((shopsRes.data as ShopDbRow[]).map(mapShopFromDb));
+        const fetchedShops = (shopsRes.data as ShopDbRow[]).map(mapShopFromDb);
+        const fetchedSlugs = new Set(fetchedShops.map((s) => s.slug));
+        const missingDefaults = DEFAULT_SHOPS.filter((ds) => !fetchedSlugs.has(ds.slug));
+        setShops([...fetchedShops, ...missingDefaults]);
       }
       if (!itemsRes.error && itemsRes.data) {
         const fetchedItems = (itemsRes.data as RentalItemDbRow[]).map(mapItemFromDb);
+        const isDemoShop = DEFAULT_SHOPS.some((ds) => ds.slug === activeShopSlug);
+        const fallbackItems =
+          isDemoShop && fetchedItems.length === 0
+            ? DEFAULT_ITEMS.filter((i) => i.shopSlug === activeShopSlug)
+            : [];
         setAllItems((prev) => [
           ...prev.filter((i) => i.shopSlug !== activeShopSlug),
-          ...fetchedItems,
+          ...(fetchedItems.length > 0 ? fetchedItems : fallbackItems),
         ]);
       }
       setCloudSynced(!shopsRes.error && !itemsRes.error);

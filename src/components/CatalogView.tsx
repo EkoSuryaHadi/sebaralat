@@ -66,6 +66,7 @@ interface CatalogViewProps {
   onSelectShop: (slug: string) => void;
   onNavigateHome: () => void;
   formatRp: (num: number) => string;
+  onSwitchRole?: (role: Role) => void;
 }
 
 export const CatalogView: React.FC<CatalogViewProps> = ({
@@ -100,6 +101,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   onSelectShop,
   onNavigateHome,
   formatRp,
+  onSwitchRole,
 }) => {
   const renderItemIcon = (type: string, className = 'w-8 h-8 text-white') => {
     switch (type) {
@@ -133,6 +135,37 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
   return (
     <div className="pb-28 bg-slate-50 min-h-screen">
+      {/* BANNER DEMO TOKO INTERAKTIF */}
+      {(shop.slug === 'borneo-rental' || shop.slug === 'kaltim-kamera') && (
+        <div className="bg-linear-to-r from-emerald-950 via-slate-900 to-slate-950 text-white px-4 py-2.5 border-b border-emerald-500/30 flex items-center justify-between text-xs gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="font-extrabold text-emerald-300 truncate">Demo Toko Aktif</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {currentRole === 'customer' ? (
+              <button
+                type="button"
+                onClick={() => onSwitchRole?.('owner')}
+                className="text-[11px] font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 shadow-sm"
+              >
+                <span>Coba Panel Owner</span>
+                <span>→</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpenWorkspace}
+                className="text-[11px] font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 shadow-sm"
+              >
+                <span>Masuk Workspace ({currentRole.toUpperCase()})</span>
+                <span>→</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* HEADER RESMI TOKO RENTAL */}
       <div className="bg-slate-900 text-white p-5 relative overflow-hidden">
         <div className="flex items-start justify-between gap-3 relative z-10">

@@ -58,12 +58,12 @@ function LoginFormContent() {
   }, [user, emailInput]);
 
   // Handler pengalihan aman (mencegah open redirect)
-  const handleProceed = (fallbackPath?: string) => {
-    let target = redirectParam || fallbackPath || '';
+  const handleProceed = (targetPath?: string) => {
+    let target = targetPath || redirectParam || '/';
 
     // Validasi target redirect aman (hanya path lokal yang diawali / dan bukan //)
     if (!target.startsWith('/') || target.startsWith('//')) {
-      target = fallbackPath || '/';
+      target = '/';
     }
 
     router.push(target);
@@ -144,8 +144,7 @@ function LoginFormContent() {
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem('sebaraja_dev_role', role);
     }
-    const target = redirectParam || `/${slug}?view=workspace`;
-    handleProceed(target);
+    router.push(`/${slug}?view=workspace`);
   };
 
   // Tampilan transisi loading jika sedang dialihkan ke toko
@@ -342,7 +341,7 @@ function LoginFormContent() {
                 </div>
 
                 <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400 truncate max-w-[200px]">{emailInput}</span>
+                  <span className="text-slate-400 truncate max-w-50">{emailInput}</span>
                   <button
                     type="button"
                     onClick={() => {
