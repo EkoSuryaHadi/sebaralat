@@ -10,7 +10,7 @@ import {
 } from '@/lib/supabase';
 import { Role, ShopMember } from '@/types';
 
-export function useAuthSession(activeShopSlug: string) {
+export function useAuthSession(activeShopSlug?: string) {
   const [user, setUser] = useState<User | null>(null);
   const [memberships, setMemberships] = useState<ShopMember[]>([]);
   const [authLoading, setAuthLoading] = useState<boolean>(isSupabaseConfigured);
@@ -64,12 +64,17 @@ export function useAuthSession(activeShopSlug: string) {
   }, [fetchMemberships]);
 
   // Role diturunkan dari tabel shop_members (server-verified), bukan state klien bebas
-  const activeMembership = memberships.find((m) => m.shopSlug === activeShopSlug);
+  const activeMembership = activeShopSlug
+    ? memberships.find((m) => m.shopSlug === activeShopSlug)
+    : undefined;
   const currentRole: Role = isSupabaseConfigured
     ? activeMembership?.role ?? 'customer'
     : devSimulatedRole;
 
-  const sendEmailOtp = async (email: string): Promise<{ error?: string }> => {
+  const sendEmailOtp = async (
+    email: string,
+    redirectPath?: string
+  ): Promise<{ error?: string }> => {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
       return { error: 'Masukkan alamat email yang valid.' };
@@ -80,9 +85,10 @@ export function useAuthSession(activeShopSlug: string) {
           'Supabase belum dikonfigurasi pada environment ini. Gunakan mode pratinjau lokal atau atur NEXT_PUBLIC_SUPABASE_URL.',
       };
     }
+    const targetPath = redirectPath || (activeShopSlug ? `/${activeShopSlug}` : '/login');
     const redirectTo =
       typeof window !== 'undefined'
-        ? `${window.location.origin}/${activeShopSlug}`
+        ? `${window.location.origin}${targetPath.startsWith('/') ? targetPath : `/${targetPath}`}`
         : undefined;
 
     const { error } = await supabase.auth.signInWithOtp({
@@ -130,6 +136,7 @@ export function useAuthSession(activeShopSlug: string) {
     if (supabase) {
       await supabase.auth.signOut();
     }
+    setUser(null);
     setMemberships([]);
     setDevSimulatedRole('customer');
   };

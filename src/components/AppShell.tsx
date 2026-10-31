@@ -152,6 +152,18 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const viewParam = searchParams.get('view');
+      if (viewParam === 'workspace') {
+        setViewMode('workspace');
+      }
+      const storedDevRole = window.sessionStorage?.getItem('sebaraja_dev_role');
+      if (storedDevRole === 'owner' || storedDevRole === 'staff') {
+        setDevSimulatedRole(storedDevRole);
+      }
+    }
+
     const handlePopState = () => {
       const pathSlug = window.location.pathname.replace(/^\/+|\/+$/g, '');
       if (!pathSlug) {
@@ -163,7 +175,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [setDevSimulatedRole]);
 
   const currentDurationObj = useMemo(() => {
     return (

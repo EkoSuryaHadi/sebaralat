@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Sparkles,
   ArrowRight,
@@ -17,7 +18,8 @@ import {
   ShieldCheck,
   MapPin,
   BadgeCheck,
-  ChevronDown
+  ChevronDown,
+  Lock,
 } from 'lucide-react';
 import { Shop } from '../types';
 
@@ -78,16 +80,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </nav>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/login"
+              className="text-xs font-bold text-slate-300 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5"
+            >
+              <Lock className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{userEmail ? 'Kelola Toko' : 'Masuk'}</span>
+            </Link>
             <button
               onClick={() => onSelectShop('borneo-rental')}
-              className="text-xs font-bold text-slate-200 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5"
+              className="hidden sm:flex text-xs font-bold text-slate-200 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-xl transition items-center gap-1.5"
             >
               <Eye className="w-3.5 h-3.5 text-emerald-400" />
               <span>Coba Demo Toko</span>
             </button>
             <a
               href="#daftar-toko"
-              className="hidden sm:inline-flex text-xs font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition"
+              className="text-xs font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3.5 sm:px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition"
             >
               Buat Katalog Gratis
             </a>
@@ -541,17 +550,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="text-[11px] text-emerald-800">
                     {userEmail
                       ? 'Toko baru akan langsung terikat ke akun email Anda.'
-                      : 'Login via Magic Link / OTP email untuk mengklaim kepemilikan toko.'}
+                      : 'Sudah punya akun? Masuk untuk mengelola atau mengklaim toko Anda.'}
                   </span>
                 </div>
-                {!userEmail && onOpenAuthModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenAuthModal}
-                    className="shrink-0 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-3 py-2 rounded-xl"
+                {!userEmail && (
+                  <Link
+                    href="/login?redirect=/#daftar-toko"
+                    className="shrink-0 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5"
                   >
-                    Login Email
-                  </button>
+                    <Lock className="w-3 h-3 text-emerald-400" />
+                    <span>Masuk</span>
+                  </Link>
                 )}
               </div>
 
@@ -618,7 +627,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 },
                 {
                   q: 'Bagaimana cara membedakan akses Owner dan Staf Gudang?',
-                  a: 'Di bagian bawah katalog terdapat menu Login Internal. Staf masuk dengan PIN Staf (hanya bisa ubah status Ready/Disewa), sedangkan Owner masuk dengan PIN Owner (bisa ubah harga, tambah unit, dan lihat log).'
+                  a: 'Pengelola dapat masuk melalui halaman Login (/login) atau tombol pengelola di katalog. Hak akses diverifikasi aman via Supabase Auth (Magic Link & OTP email) sesuai peran Owner atau Staf Gudang.'
                 },
                 {
                   q: 'Apakah ada potongan komisi dari transaksi sewa?',

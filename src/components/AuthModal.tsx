@@ -224,6 +224,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           </div>
         )}
+
+        <div className="pt-2 text-center border-t border-slate-100">
+          <a
+            href="/login"
+            className="text-[11px] font-semibold text-slate-500 hover:text-emerald-600 transition"
+          >
+            Buka Halaman Login Penuh (/login) &rarr;
+          </a>
+        </div>
       </div>
     </div>
   );
