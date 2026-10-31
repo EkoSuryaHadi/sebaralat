@@ -28,6 +28,7 @@ import {
   ItemStatus,
 } from '@/types';
 import { DEFAULT_SHOPS, DEFAULT_ITEMS } from '@/data/mockData';
+import { triggerTelegramClientAlert } from '@/lib/telegram';
 import {
   addDaysToIsoDate,
   computeShopAvailabilityMap,
@@ -496,6 +497,13 @@ export function useShopData(params: {
       };
       setShops((prev) => [...prev, created]);
       setAllItems((prev) => [starterItem, ...prev]);
+      void triggerTelegramClientAlert({
+        event: 'shop_created',
+        shopSlug: created.slug,
+        name: created.name,
+        whatsapp: created.whatsapp,
+        location: created.location,
+      });
       return created;
     }
 
@@ -515,6 +523,20 @@ export function useShopData(params: {
 
     const created = mapShopFromDb(data as ShopDbRow);
     setShops((prev) => [...prev.filter((s) => s.slug !== created.slug), created]);
+
+    void supabase.auth.getSession().then(({ data: sessionData }) =>
+      triggerTelegramClientAlert(
+        {
+          event: 'shop_created',
+          shopSlug: created.slug,
+          name: created.name,
+          whatsapp: created.whatsapp,
+          location: created.location,
+        },
+        sessionData.session?.access_token
+      )
+    );
+
     return created;
   };
 

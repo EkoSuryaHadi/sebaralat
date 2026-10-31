@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { User } from '@supabase/supabase-js';
 import {
   supabase,
@@ -9,6 +9,10 @@ import {
   ShopMemberDbRow,
 } from '@/lib/supabase';
 import { resolveEffectiveRole } from '@/lib/validators';
+import {
+  detectNewlyClaimedMemberships,
+  triggerTelegramClientAlert,
+} from '@/lib/telegram';
 import { Role, ShopMember } from '@/types';
 
 export function useAuthSession(activeShopSlug?: string) {
@@ -26,26 +30,88 @@ export function useAuthSession(activeShopSlug?: string) {
     return 'customer';
   });
 
+  const inFlightMembershipRef = useRef<{
+    uid: string;
+    promise: Promise<ShopMember[]>;
+  } | null>(null);
+
   const fetchMemberships = useCallback(async (uid: string): Promise<ShopMember[]> => {
     if (!supabase) return [];
-    try {
-      // Klaim undangan staf yang tertunda berdasarkan email user yang login
-      await supabase.rpc('claim_my_invites');
+    const client = supabase;
 
-      const { data, error } = await supabase
-        .from('shop_members')
-        .select('shop_slug, user_id, email, role, created_at')
-        .eq('user_id', uid);
-
-      if (!error && data) {
-        const mapped = (data as ShopMemberDbRow[]).map(mapMemberFromDb);
-        setMemberships(mapped);
-        return mapped;
-      }
-    } catch (err) {
-      console.error('Gagal mengambil data keanggotaan toko:', err);
+    if (inFlightMembershipRef.current?.uid === uid) {
+      return inFlightMembershipRef.current.promise;
     }
-    return [];
+
+    const task = (async (): Promise<ShopMember[]> => {
+      try {
+        // Ambil daftar toko yang sudah diikuti sebelum klaim undangan baru
+        const { data: beforeData, error: beforeError } = await client
+          .from('shop_members')
+          .select('shop_slug')
+          .eq('user_id', uid);
+
+        const beforeSlugs = ((beforeData as { shop_slug: string }[] | null) ?? []).map(
+          (row) => row.shop_slug
+        );
+
+        // Klaim undangan staf yang tertunda berdasarkan email user yang login
+        await client.rpc('claim_my_invites');
+
+        const { data, error } = await client
+          .from('shop_members')
+          .select('shop_slug, user_id, email, role, created_at')
+          .eq('user_id', uid);
+
+        if (!error && data) {
+          const mapped = (data as ShopMemberDbRow[]).map(mapMemberFromDb);
+          setMemberships(mapped);
+
+          // Kirim notifikasi Telegram hanya jika ada undangan yang BARU diklaim saat ini
+          if (!beforeError) {
+            const newlyJoined = detectNewlyClaimedMemberships(beforeSlugs, mapped);
+            if (newlyJoined.length > 0) {
+              const { data: sessionData } = await client.auth.getSession();
+              const accessToken = sessionData.session?.access_token;
+
+              for (const joined of newlyJoined) {
+                const storageKey = `sebaraja_notified_join:${uid}:${joined.shopSlug}`;
+                const alreadySent =
+                  typeof window !== 'undefined' &&
+                  window.sessionStorage?.getItem(storageKey) === '1';
+
+                if (!alreadySent) {
+                  if (typeof window !== 'undefined') {
+                    window.sessionStorage?.setItem(storageKey, '1');
+                  }
+                  void triggerTelegramClientAlert(
+                    {
+                      event: 'member_joined',
+                      shopSlug: joined.shopSlug,
+                      role: joined.role,
+                      email: joined.email,
+                    },
+                    accessToken
+                  );
+                }
+              }
+            }
+          }
+
+          return mapped;
+        }
+      } catch (err) {
+        console.error('Gagal mengambil data keanggotaan toko:', err);
+      } finally {
+        if (inFlightMembershipRef.current?.uid === uid) {
+          inFlightMembershipRef.current = null;
+        }
+      }
+      return [];
+    })();
+
+    inFlightMembershipRef.current = { uid, promise: task };
+    return task;
   }, []);
 
   useEffect(() => {
