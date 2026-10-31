@@ -8,6 +8,7 @@ import {
   mapMemberFromDb,
   ShopMemberDbRow,
 } from '@/lib/supabase';
+import { resolveEffectiveRole } from '@/lib/validators';
 import { Role, ShopMember } from '@/types';
 
 export function useAuthSession(activeShopSlug?: string) {
@@ -15,7 +16,15 @@ export function useAuthSession(activeShopSlug?: string) {
   const [memberships, setMemberships] = useState<ShopMember[]>([]);
   const [authLoading, setAuthLoading] = useState<boolean>(isSupabaseConfigured);
   // Hanya tersedia pada mode pengembangan lokal ketika Supabase tidak dikonfigurasi
-  const [devSimulatedRole, setDevSimulatedRole] = useState<Role>('customer');
+  const [devSimulatedRole, setDevSimulatedRole] = useState<Role>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = window.sessionStorage?.getItem('sebaraja_dev_role');
+      if (stored === 'owner' || stored === 'staff') {
+        return stored;
+      }
+    }
+    return 'customer';
+  });
 
   const fetchMemberships = useCallback(async (uid: string): Promise<ShopMember[]> => {
     if (!supabase) return [];
@@ -72,12 +81,17 @@ export function useAuthSession(activeShopSlug?: string) {
     };
   }, [fetchMemberships]);
 
-  // Role diturunkan dari tabel shop_members jika terautentikasi riil; jika tidak ada (seperti mode demo/offline), gunakan peran simulasi devSimulatedRole
+  // Role diturunkan dari tabel shop_members jika terautentikasi riil;
+  // P1-3: Pada produksi (Supabase aktif), devSimulatedRole hanya diizinkan pada toko demo showcase
   const activeMembership = activeShopSlug
     ? memberships.find((m) => m.shopSlug === activeShopSlug)
     : undefined;
-  const currentRole: Role =
-    activeMembership?.role ?? devSimulatedRole;
+  const currentRole: Role = resolveEffectiveRole({
+    authenticatedRole: activeMembership?.role,
+    devSimulatedRole,
+    isSupabaseConfigured,
+    activeShopSlug,
+  });
 
   const sendEmailOtp = async (
     email: string,

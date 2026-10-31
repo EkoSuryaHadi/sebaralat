@@ -28,7 +28,12 @@ import {
   ItemStatus,
 } from '@/types';
 import { DEFAULT_SHOPS, DEFAULT_ITEMS } from '@/data/mockData';
-import { addDaysToIsoDate } from '@/lib/validators';
+import {
+  addDaysToIsoDate,
+  computeShopAvailabilityMap,
+  getDurationMultiplier,
+  sanitizeItemForRole,
+} from '@/lib/validators';
 
 export function useShopData(params: {
   activeShopSlug: string;
@@ -78,7 +83,7 @@ export function useShopData(params: {
         client
           .from('rental_items')
           .select(
-            'id, shop_slug, sku, name, category, icon_type, price_per_day, status, stock, available_at, renter_note, last_updated_by, specs, image_bg, image_url'
+            'id, shop_slug, sku, name, category, icon_type, price_per_day, status, stock, available_at, specs, image_bg, image_url'
           )
           .eq('shop_slug', activeShopSlug)
           .limit(200),
@@ -174,10 +179,10 @@ export function useShopData(params: {
     };
   }, [activeShopSlug]);
 
-  // 2. Fetch data internal (log, booking, undangan) hanya bila user punya role pengelola
+  // 2. Fetch data internal (log, booking, undangan, serta kolom internal renter_note) hanya bila user punya role pengelola
   const fetchWorkspaceData = useCallback(async () => {
     if (!supabase || currentRole === 'customer') return;
-    const [logsRes, bookingsRes, invitesRes] = await Promise.all([
+    const [logsRes, bookingsRes, invitesRes, internalItemsRes] = await Promise.all([
       supabase
         .from('activity_logs')
         .select('id, shop_slug, actor_role, action, created_at')
@@ -199,6 +204,11 @@ export function useShopData(params: {
             .eq('shop_slug', activeShopSlug)
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: null, error: null }),
+      supabase
+        .from('rental_items')
+        .select('id, renter_note, last_updated_by')
+        .eq('shop_slug', activeShopSlug)
+        .limit(200),
     ]);
 
     if (!logsRes.error && logsRes.data) {
@@ -209,6 +219,29 @@ export function useShopData(params: {
     }
     if (!invitesRes.error && invitesRes.data) {
       setInvites((invitesRes.data as ShopInviteDbRow[]).map(mapInviteFromDb));
+    }
+    if (!internalItemsRes.error && internalItemsRes.data) {
+      const notesMap = new Map(
+        (
+          internalItemsRes.data as {
+            id: string;
+            renter_note?: string | null;
+            last_updated_by?: string | null;
+          }[]
+        ).map((row) => [
+          row.id,
+          {
+            renterNote: row.renter_note || '',
+            lastUpdatedBy: row.last_updated_by || 'Owner',
+          },
+        ])
+      );
+      setAllItems((prev) =>
+        prev.map((item) => {
+          const meta = notesMap.get(item.id);
+          return meta ? { ...item, ...meta } : item;
+        })
+      );
     }
   }, [activeShopSlug, currentRole]);
 
@@ -248,36 +281,26 @@ export function useShopData(params: {
   }, [activeShopSlug, startDate, durationDays]);
 
   const availabilityMap = useMemo<Record<string, number>>(() => {
-    if (cloudAvailabilityMap) {
-      return cloudAvailabilityMap;
+    const localMap = computeShopAvailabilityMap({
+      items: allItems,
+      bookings,
+      activeShopSlug,
+      startDate,
+      durationDays,
+    });
+    if (!cloudAvailabilityMap) {
+      return localMap;
     }
-    const endDate = addDaysToIsoDate(startDate, durationDays);
-    const map: Record<string, number> = {};
+    const merged: Record<string, number> = { ...localMap };
     const shopItems = allItems.filter((i) => i.shopSlug === activeShopSlug);
     for (const item of shopItems) {
-      if (item.status === 'maintenance') {
-        map[item.id] = 0;
-        continue;
+      if (item.status !== 'available') {
+        merged[item.id] = 0;
+      } else if (typeof cloudAvailabilityMap[item.id] === 'number') {
+        merged[item.id] = cloudAvailabilityMap[item.id];
       }
-      const reserved = bookings
-        .filter(
-          (b) =>
-            b.shopSlug === activeShopSlug &&
-            (b.status === 'confirmed' || b.status === 'picked_up') &&
-            b.startDate <= endDate &&
-            b.endDate >= startDate
-        )
-        .reduce((acc, b) => {
-          const lineQty =
-            b.lines
-              ?.filter((ln) => ln.itemId === item.id)
-              .reduce((s, ln) => s + ln.qty, 0) || 0;
-          return acc + lineQty;
-        }, 0);
-
-      map[item.id] = Math.max(0, item.stock - reserved);
     }
-    return map;
+    return merged;
   }, [cloudAvailabilityMap, activeShopSlug, startDate, durationDays, allItems, bookings]);
 
   const shop = useMemo<Shop | null>(() => {
@@ -285,8 +308,10 @@ export function useShopData(params: {
   }, [shops, activeShopSlug]);
 
   const items = useMemo<RentalItem[]>(() => {
-    return allItems.filter((i) => i.shopSlug === activeShopSlug);
-  }, [allItems, activeShopSlug]);
+    return allItems
+      .filter((i) => i.shopSlug === activeShopSlug)
+      .map((i) => sanitizeItemForRole(i, currentRole));
+  }, [allItems, activeShopSlug, currentRole]);
 
   const shopLogs = useMemo<ActivityLog[]>(() => {
     return activityLogs.filter((l) => l.shopSlug === activeShopSlug);
@@ -542,6 +567,7 @@ export function useShopData(params: {
       return localBooking;
     }
 
+    const safeMultiplier = getDurationMultiplier(durationDays);
     const linesPayload = params.selectedList.map((it) => ({
       item_id: it.id,
       qty: it.qty,
@@ -553,7 +579,7 @@ export function useShopData(params: {
       p_customer_phone: params.customerPhone,
       p_start_date: startDate,
       p_duration_days: durationDays,
-      p_multiplier: params.multiplier,
+      p_multiplier: safeMultiplier,
       p_lines: linesPayload,
       p_notes: params.notes,
     });

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Lock, Mail, KeyRound, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
 import { Role } from '../types';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -226,12 +227,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         <div className="pt-2 text-center border-t border-slate-100">
-          <a
+          <Link
             href="/login"
             className="text-[11px] font-semibold text-slate-500 hover:text-emerald-600 transition"
           >
             Buka Halaman Login Penuh (/login) &rarr;
-          </a>
+          </Link>
         </div>
       </div>
     </div>

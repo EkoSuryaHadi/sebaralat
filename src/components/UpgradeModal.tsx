@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import {
   X,
-  Check,
   Sparkles,
   MessageCircle,
   ShieldCheck,

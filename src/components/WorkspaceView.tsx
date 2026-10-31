@@ -36,7 +36,7 @@ import {
   ShopInvite,
 } from '../types';
 import { uploadShopLogo } from '@/lib/imageUtils';
-import { isProPlanActive, STARTER_MAX_ITEMS } from '../lib/validators';
+import { isProPlanActive, normalizeWhatsapp, STARTER_MAX_ITEMS } from '../lib/validators';
 
 interface WorkspaceViewProps {
   shop: Shop;
@@ -109,6 +109,73 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   const [inviteRole, setInviteRole] = useState<'staff' | 'owner'>('staff');
   const [isInviting, setIsInviting] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // P1-1: Draft lokal untuk pengaturan profil toko (di-key berdasarkan slug) agar tidak menembakkan query DB di setiap ketikan huruf dan bebas cascading render
+  const [shopEditsBySlug, setShopEditsBySlug] = useState<
+    Record<
+      string,
+      Partial<{
+        name: string;
+        tagline: string;
+        whatsapp: string;
+        hours: string;
+        location: string;
+      }>
+    >
+  >({});
+
+  const currentShopEdit = shopEditsBySlug[shop.slug] || {};
+  const shopDraft = {
+    name: currentShopEdit.name ?? shop.name,
+    tagline: currentShopEdit.tagline ?? (shop.tagline || ''),
+    whatsapp: currentShopEdit.whatsapp ?? shop.whatsapp,
+    hours: currentShopEdit.hours ?? shop.hours,
+    location: currentShopEdit.location ?? shop.location,
+  };
+
+  const setShopDraft = (nextDraft: typeof shopDraft) => {
+    setShopEditsBySlug((prev) => ({
+      ...prev,
+      [shop.slug]: nextDraft,
+    }));
+  };
+
+  // P1-1: Draft lokal per item untuk availableAt & renterNote agar tidak memicu banjir UPDATE & audit log tiap ketikan huruf
+  const [itemNoteDrafts, setItemNoteDrafts] = useState<
+    Record<string, { availableAt?: string; renterNote?: string }>
+  >({});
+
+  const getDraftValue = (item: RentalItem, field: 'availableAt' | 'renterNote'): string => {
+    const draft = itemNoteDrafts[item.id];
+    if (draft && typeof draft[field] === 'string') {
+      return draft[field]!;
+    }
+    return item[field] || '';
+  };
+
+  const setDraftValue = (itemId: string, field: 'availableAt' | 'renterNote', val: string) => {
+    setItemNoteDrafts((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [field]: val,
+      },
+    }));
+  };
+
+  const commitItemDraftField = (item: RentalItem, field: 'availableAt' | 'renterNote') => {
+    const draft = itemNoteDrafts[item.id];
+    if (!draft || typeof draft[field] !== 'string') return;
+    const nextVal = draft[field]!.trim();
+    if (nextVal !== (item[field] || '')) {
+      onUpdateItemField(item.id, field, nextVal);
+      triggerToast(
+        field === 'availableAt'
+          ? 'Estimasi jadwal kembali disimpan.'
+          : 'Catatan peminjam disimpan.'
+      );
+    }
+  };
 
   return (
     <div className="p-4 space-y-4 pb-16 bg-slate-50 min-h-screen">
@@ -450,10 +517,16 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                     </label>
                     <input
                       type="text"
-                      value={item.availableAt}
+                      value={getDraftValue(item, 'availableAt')}
                       onChange={(e) =>
-                        onUpdateItemField(item.id, 'availableAt', e.target.value)
+                        setDraftValue(item.id, 'availableAt', e.target.value)
                       }
+                      onBlur={() => commitItemDraftField(item, 'availableAt')}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.currentTarget.blur();
+                        }
+                      }}
                       placeholder="Contoh: Minggu, 1 Nov (14:00)"
                       className="w-full text-xs bg-white border border-rose-200 rounded-lg px-2.5 py-1.5 text-slate-800"
                     />
@@ -464,10 +537,16 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                     </label>
                     <input
                       type="text"
-                      value={item.renterNote}
+                      value={getDraftValue(item, 'renterNote')}
                       onChange={(e) =>
-                        onUpdateItemField(item.id, 'renterNote', e.target.value)
+                        setDraftValue(item.id, 'renterNote', e.target.value)
                       }
+                      onBlur={() => commitItemDraftField(item, 'renterNote')}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.currentTarget.blur();
+                        }
+                      }}
                       placeholder="Contoh: Disewa Pak Budi - KTP ditahan"
                       className="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700"
                     />
@@ -822,8 +901,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={shop.name}
-                  onChange={(e) => onSaveShopSettings({ ...shop, name: e.target.value })}
+                  value={shopDraft.name}
+                  onChange={(e) => setShopDraft({ ...shopDraft, name: e.target.value })}
                   className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
                 />
               </div>
@@ -834,8 +913,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={shop.tagline || ''}
-                  onChange={(e) => onSaveShopSettings({ ...shop, tagline: e.target.value })}
+                  value={shopDraft.tagline}
+                  onChange={(e) => setShopDraft({ ...shopDraft, tagline: e.target.value })}
                   className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
                 />
               </div>
@@ -847,8 +926,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   </label>
                   <input
                     type="text"
-                    value={shop.whatsapp}
-                    onChange={(e) => onSaveShopSettings({ ...shop, whatsapp: e.target.value })}
+                    value={shopDraft.whatsapp}
+                    onChange={(e) => setShopDraft({ ...shopDraft, whatsapp: e.target.value })}
                     className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
                   />
                 </div>
@@ -858,8 +937,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   </label>
                   <input
                     type="text"
-                    value={shop.hours}
-                    onChange={(e) => onSaveShopSettings({ ...shop, hours: e.target.value })}
+                    value={shopDraft.hours}
+                    onChange={(e) => setShopDraft({ ...shopDraft, hours: e.target.value })}
                     className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
                   />
                 </div>
@@ -871,8 +950,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={shop.location}
-                  onChange={(e) => onSaveShopSettings({ ...shop, location: e.target.value })}
+                  value={shopDraft.location}
+                  onChange={(e) => setShopDraft({ ...shopDraft, location: e.target.value })}
                   className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
                 />
               </div>
@@ -973,10 +1052,28 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
               <button
                 onClick={() => {
-                  onRecordAuditLog('Memperbarui pengaturan profil & keamanan toko');
+                  const cleanName = shopDraft.name.trim();
+                  const cleanWa = normalizeWhatsapp(shopDraft.whatsapp);
+                  if (cleanName.length < 2) {
+                    triggerToast('Nama usaha minimal 2 karakter.');
+                    return;
+                  }
+                  if (!/^62[0-9]{8,13}$/.test(cleanWa)) {
+                    triggerToast('Nomor WhatsApp harus valid (contoh: 08123456789).');
+                    return;
+                  }
+                  onSaveShopSettings({
+                    ...shop,
+                    name: cleanName,
+                    tagline: shopDraft.tagline.trim(),
+                    whatsapp: cleanWa,
+                    hours: shopDraft.hours.trim() || shop.hours,
+                    location: shopDraft.location.trim() || shop.location,
+                  });
+                  onRecordAuditLog('Memperbarui pengaturan profil & informasi toko');
                   triggerToast('Pengaturan toko berhasil disimpan!');
                 }}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl cursor-pointer"
               >
                 Simpan Perubahan
               </button>

@@ -4,7 +4,7 @@
 -- =========================================================
 
 BEGIN;
-SELECT plan(10);
+SELECT plan(12);
 
 -- 1. Pastikan RLS aktif di semua tabel publik utama
 SELECT ok(
@@ -80,6 +80,20 @@ SELECT throws_ok(
     )$$,
   'Tanggal mulai sewa tidak boleh di masa lalu.',
   'Booking tanggal masa lalu wajib ditolak'
+);
+
+-- 7. P0-3: Simulasi role anon: dilarang membaca kolom internal renter_note dari rental_items
+SELECT throws_ok(
+  $$SELECT renter_note FROM public.rental_items LIMIT 1$$,
+  NULL,
+  'Anon dilarang membaca kolom internal renter_note pada rental_items'
+);
+
+-- 8. P0-2: Fungsi server duration_multiplier harus menghitung tarif resmi dan tidak bisa dimanipulasi klien
+SELECT is(
+  public.duration_multiplier(3),
+  2.70,
+  'duration_multiplier(3) harus menghasilkan 2.70 (diskon 10%)'
 );
 
 SELECT * FROM finish();

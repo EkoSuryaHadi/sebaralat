@@ -87,6 +87,22 @@ $$;
 -- FUNGSI KETERSEDIAAN & RPC BOOKING ATOMIK (ANTI OVERBOOKING)
 -- =========================================================
 
+-- Hitung multiplier tarif sewa resmi di sisi server berdasarkan durasi hari (P0-2 Anti Price Tampering)
+CREATE OR REPLACE FUNCTION public.duration_multiplier(p_duration_days INTEGER)
+RETURNS NUMERIC
+LANGUAGE sql
+IMMUTABLE
+SET search_path = ''
+AS $$
+  SELECT CASE
+    WHEN p_duration_days IS NULL OR p_duration_days <= 1 THEN 1::numeric
+    WHEN p_duration_days = 2 THEN 2::numeric
+    WHEN p_duration_days >= 7 THEN round((p_duration_days * 0.75)::numeric, 2)
+    WHEN p_duration_days >= 3 THEN round((p_duration_days * 0.90)::numeric, 2)
+    ELSE p_duration_days::numeric
+  END;
+$$;
+
 -- Hitung stok tersedia untuk suatu unit pada rentang tanggal [p_start, p_end]
 CREATE OR REPLACE FUNCTION public.available_item_qty(
   p_item_id UUID,
@@ -100,7 +116,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
   SELECT CASE
-    WHEN i.status = 'maintenance' THEN 0
+    WHEN i.status <> 'available' THEN 0
     ELSE GREATEST(
       0,
       i.stock - COALESCE((
@@ -166,6 +182,7 @@ DECLARE
   v_item public.rental_items;
   v_qty INTEGER;
   v_avail INTEGER;
+  v_effective_multiplier NUMERIC;
   v_subtotal NUMERIC;
 BEGIN
   IF p_start_date < CURRENT_DATE THEN
@@ -181,6 +198,8 @@ BEGIN
   END IF;
 
   v_end_date := p_start_date + (p_duration_days - 1);
+  -- Abaikan p_multiplier dari klien dan hitung di server berdasarkan p_duration_days (P0-2)
+  v_effective_multiplier := public.duration_multiplier(p_duration_days);
 
   -- Generate kode booking unik: SBR-YYMMDD-XXXX
   v_code := 'SBR-' || to_char(CURRENT_DATE, 'YYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 4));
@@ -226,7 +245,7 @@ BEGIN
         v_item.name, p_start_date, v_end_date, v_avail;
     END IF;
 
-    v_subtotal := round(v_item.price_per_day * p_multiplier * v_qty);
+    v_subtotal := round(v_item.price_per_day * v_effective_multiplier * v_qty);
     v_total := v_total + v_subtotal;
 
     INSERT INTO public.booking_lines (

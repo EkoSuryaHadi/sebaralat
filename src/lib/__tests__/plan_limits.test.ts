@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   STARTER_MAX_ITEMS,
   isProPlanActive,
@@ -51,5 +53,41 @@ describe('Aturan & Pembatasan Paket Starter vs Bisnis PRO', () => {
     assert.match(msg, /sebaraja\.com\/toko-outdoor/);
     assert.match(msg, /Bisnis PRO Tahunan/);
   });
+
+  it('P0-1: Migrasi SQL 0005_subscriptions.sql menggunakan shop_slug & slug (bukan shop_id)', () => {
+    const sqlPath = path.resolve(process.cwd(), 'supabase/migrations/0005_subscriptions.sql');
+    const sqlContent = fs.readFileSync(sqlPath, 'utf8');
+    assert.equal(
+      sqlContent.includes('NEW.shop_id'),
+      false,
+      '0005_subscriptions.sql tidak boleh mereferensikan NEW.shop_id yang tidak ada'
+    );
+    assert.equal(
+      sqlContent.includes('WHERE slug = NEW.shop_slug'),
+      true,
+      '0005_subscriptions.sql wajib memfilter public.shops dengan slug = NEW.shop_slug'
+    );
+    assert.equal(
+      sqlContent.includes('WHERE shop_slug = NEW.shop_slug'),
+      true,
+      '0005_subscriptions.sql wajib memfilter public.rental_items dengan shop_slug = NEW.shop_slug'
+    );
+  });
+
+  it('P0-2 & P1-5: Migrasi SQL 0004_bookings.sql menghitung multiplier di server & mengecek status <> available', () => {
+    const sqlPath = path.resolve(process.cwd(), 'supabase/migrations/0004_bookings.sql');
+    const sqlContent = fs.readFileSync(sqlPath, 'utf8');
+    assert.equal(
+      sqlContent.includes('public.duration_multiplier(p_duration_days)'),
+      true,
+      'create_booking wajib menggunakan fungsi server public.duration_multiplier(p_duration_days)'
+    );
+    assert.equal(
+      sqlContent.includes("WHEN i.status <> 'available' THEN 0"),
+      true,
+      'available_item_qty wajib mengembalikan 0 bila status item bukan available (rented / maintenance)'
+    );
+  });
 });
+
 

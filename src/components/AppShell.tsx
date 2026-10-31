@@ -21,7 +21,6 @@ import {
   CreateBookingSchema,
   InviteMemberSchema,
   canAddRentalItem,
-  isProPlanActive,
   STARTER_MAX_ITEMS,
 } from '@/lib/validators';
 import { useToast } from '@/hooks/useToast';
@@ -50,10 +49,16 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
 
   const { toastMsg, triggerToast } = useToast();
 
-  // Routing & View Mode
-  const [viewMode, setViewMode] = useState<ViewMode>(
-    initialShopSlug ? 'catalog' : 'saas_home'
-  );
+  // Routing & View Mode (mendukung query ?view=workspace dan ?item=id tanpa setState sinkron di useEffect)
+  const [manualViewMode, setViewMode] = useState<ViewMode | null>(null);
+  const urlViewParam =
+    mounted && typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('view')
+      : null;
+  const viewMode: ViewMode =
+    manualViewMode ??
+    (urlViewParam === 'workspace' ? 'workspace' : initialShopSlug ? 'catalog' : 'saas_home');
+
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('inventory');
   const [activeShopSlug, setActiveShopSlug] = useState<string>(
     initialShopSlug || 'borneo-rental'
@@ -71,6 +76,15 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [showWaPreviewModal, setShowWaPreviewModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [manualHighlightedItemId, setHighlightedItemId] = useState<string | null | undefined>(
+    undefined
+  );
+  const urlItemParam =
+    mounted && typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('item')
+      : null;
+  const highlightedItemId: string | null =
+    manualHighlightedItemId !== undefined ? manualHighlightedItemId : urlItemParam;
 
   // Auth & Role dari Supabase Auth + shop_members
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -161,18 +175,6 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const searchParams = new URLSearchParams(window.location.search);
-      const viewParam = searchParams.get('view');
-      if (viewParam === 'workspace') {
-        setViewMode('workspace');
-      }
-      const storedDevRole = window.sessionStorage?.getItem('sebaraja_dev_role');
-      if (storedDevRole === 'owner' || storedDevRole === 'staff') {
-        setDevSimulatedRole(storedDevRole);
-      }
-    }
-
     const handlePopState = () => {
       const pathSlug = window.location.pathname.replace(/^\/+|\/+$/g, '');
       if (!pathSlug) {
@@ -184,7 +186,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [setDevSimulatedRole]);
+  }, []);
 
   // Jika user sudah terautentikasi dan memiliki toko terdaftar saat membuka root (/), langsung alihkan ke panel tokonya
   useEffect(() => {
@@ -737,6 +739,13 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               onNavigateHome={navigateToLandingHome}
               formatRp={formatRp}
               onSwitchRole={handleSwitchRole}
+              highlightedItemId={highlightedItemId}
+              onClearHighlightedItem={() => {
+                setHighlightedItemId(null);
+                if (typeof window !== 'undefined' && shop) {
+                  window.history.replaceState({}, '', `/${shop.slug}`);
+                }
+              }}
             />
           )}
 

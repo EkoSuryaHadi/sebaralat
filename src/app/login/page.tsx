@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,19 +11,16 @@ import {
   ShieldCheck,
   Sparkles,
   ArrowLeft,
-  ArrowRight,
   LogOut,
-  Store,
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Building2,
   UserCheck,
   ExternalLink
 } from 'lucide-react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { DEFAULT_SHOPS } from '@/data/mockData';
+import { isDemoShopSlug } from '@/lib/validators';
 
 function LoginFormContent() {
   const router = useRouter();
@@ -42,7 +39,8 @@ function LoginFormContent() {
     setDevSimulatedRole,
   } = useAuthSession(shopParam || undefined);
 
-  const [emailInput, setEmailInput] = useState('');
+  const [customEmailInput, setEmailInput] = useState<string | null>(null);
+  const emailInput = customEmailInput !== null ? customEmailInput : user?.email || '';
   const [otpInput, setOtpInput] = useState('');
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [loading, setLoading] = useState(false);
@@ -50,24 +48,20 @@ function LoginFormContent() {
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
 
-  // Sinkronisasi input email jika user sudah memiliki email
-  useEffect(() => {
-    if (user?.email && !emailInput) {
-      setEmailInput(user.email);
-    }
-  }, [user, emailInput]);
-
   // Handler pengalihan aman (mencegah open redirect)
-  const handleProceed = (targetPath?: string) => {
-    let target = targetPath || redirectParam || '/';
+  const handleProceed = useCallback(
+    (targetPath?: string) => {
+      let target = targetPath || redirectParam || '/';
 
-    // Validasi target redirect aman (hanya path lokal yang diawali / dan bukan //)
-    if (!target.startsWith('/') || target.startsWith('//')) {
-      target = '/';
-    }
+      // Validasi target redirect aman (hanya path lokal yang diawali / dan bukan //)
+      if (!target.startsWith('/') || target.startsWith('//')) {
+        target = '/';
+      }
 
-    router.push(target);
-  };
+      router.push(target);
+    },
+    [redirectParam, router]
+  );
 
   // Auto redirect begitu user terdeteksi login dan data toko selesai dimuat
   useEffect(() => {
@@ -75,17 +69,14 @@ function LoginFormContent() {
 
     if (user) {
       if (redirectParam) {
-        setIsRedirecting(true);
         handleProceed(redirectParam);
       } else if (shopParam) {
-        setIsRedirecting(true);
         handleProceed(`/${shopParam}?view=workspace`);
       } else if (memberships.length > 0) {
-        setIsRedirecting(true);
         handleProceed(`/${memberships[0].shopSlug}?view=workspace`);
       }
     }
-  }, [user, authLoading, memberships, redirectParam, shopParam]);
+  }, [user, authLoading, memberships, redirectParam, shopParam, handleProceed]);
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,11 +131,12 @@ function LoginFormContent() {
   };
 
   const handleDevLogin = (role: 'owner' | 'staff', slug = 'borneo-rental') => {
+    const safeDemoSlug = isDemoShopSlug(slug) ? slug : 'borneo-rental';
     setDevSimulatedRole(role);
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem('sebaraja_dev_role', role);
     }
-    router.push(`/${slug}?view=workspace`);
+    router.push(`/${safeDemoSlug}?view=workspace`);
   };
 
   // Tampilan transisi loading jika sedang dialihkan ke toko
@@ -403,33 +395,37 @@ function LoginFormContent() {
               </div>
             )}
 
-            {/* MODE SIMULATOR DEMO (UNTUK TESTING / LOKAL) */}
-            <div className="pt-4 border-t border-slate-800/80 space-y-2.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-400 font-semibold">Mode Uji Coba Pratinjau:</span>
-                <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md font-mono">
-                  Demo
-                </span>
+            {/* MODE SIMULATOR DEMO (HANYA UNTUK TOKO DEMO SHOWCASE ATAU TANPA SUPABASE) */}
+            {(!isSupabaseConfigured || !shopParam || isDemoShopSlug(shopParam)) && (
+              <div className="pt-4 border-t border-slate-800/80 space-y-2.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400 font-semibold">
+                    Mode Uji Coba Toko Demo (/borneo-rental):
+                  </span>
+                  <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md font-mono">
+                    Sandbox
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDevLogin('owner', shopParam || 'borneo-rental')}
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Demo Owner</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDevLogin('staff', shopParam || 'borneo-rental')}
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-teal-400" />
+                    <span>Demo Staf</span>
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleDevLogin('owner', shopParam || 'borneo-rental')}
-                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Demo Owner</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDevLogin('staff', shopParam || 'borneo-rental')}
-                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Demo Staf</span>
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>

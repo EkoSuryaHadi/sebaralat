@@ -67,6 +67,8 @@ interface CatalogViewProps {
   onNavigateHome: () => void;
   formatRp: (num: number) => string;
   onSwitchRole?: (role: Role) => void;
+  highlightedItemId?: string | null;
+  onClearHighlightedItem?: () => void;
 }
 
 export const CatalogView: React.FC<CatalogViewProps> = ({
@@ -102,6 +104,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   onNavigateHome,
   formatRp,
   onSwitchRole,
+  highlightedItemId,
+  onClearHighlightedItem,
 }) => {
   const renderItemIcon = (type: string, className = 'w-8 h-8 text-white') => {
     switch (type) {
@@ -120,7 +124,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     }
   };
 
-  const filteredItems = items.filter((item) => {
+  const highlightedItem = highlightedItemId
+    ? items.find((i) => i.id === highlightedItemId || i.sku === highlightedItemId)
+    : undefined;
+
+  const baseFilteredItems = items.filter((item) => {
     const matchSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.specs && item.specs.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase())));
@@ -130,6 +138,11 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     if (selectedCategory === '🟢 Ready Saja') return item.status === 'available' && item.stock > 0;
     return item.category === selectedCategory;
   });
+
+  // P1-4: Jika pelanggan datang dari scan QR fisik (?item=...), pastikan unit tersebut tampil di paling atas
+  const filteredItems = highlightedItem
+    ? [highlightedItem, ...baseFilteredItems.filter((i) => i.id !== highlightedItem.id)]
+    : baseFilteredItems;
 
   const isPro = isProPlanActive(shop) || Boolean(shop.isVerified);
 
@@ -340,6 +353,26 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
       {/* DAFTAR ITEM KATALOG */}
       <div className="px-4 space-y-3">
+        {highlightedItem && (
+          <div className="bg-emerald-950 text-white rounded-2xl p-3.5 border border-emerald-500/40 flex items-center justify-between gap-2 shadow-md">
+            <div className="min-w-0">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 block">
+                🏷️ Unit dari Scan Label QR Fisik
+              </span>
+              <p className="text-xs font-bold truncate mt-0.5">{highlightedItem.name}</p>
+            </div>
+            {onClearHighlightedItem && (
+              <button
+                type="button"
+                onClick={onClearHighlightedItem}
+                className="text-[11px] font-bold bg-white/10 hover:bg-white/20 text-emerald-300 px-2.5 py-1.5 rounded-xl shrink-0 transition cursor-pointer"
+              >
+                Tampilkan Normal ✕
+              </button>
+            )}
+          </div>
+        )}
+
         {filteredItems.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-slate-200">
             <p className="text-sm font-bold text-slate-700">Unit tidak ditemukan</p>
@@ -355,18 +388,22 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 : item.status === 'available'
                 ? item.stock
                 : 0;
-            const isAvailable = item.status !== 'maintenance' && effectiveStock > 0;
+            // P1-5: Hanya status 'available' dengan stok > 0 yang berstatus TERSEDIA
+            const isAvailable = item.status === 'available' && effectiveStock > 0;
             const isRented =
               item.status === 'rented' ||
               (item.status === 'available' && effectiveStock === 0);
             const calculatedPrice = item.pricePerDay * currentDurationObj.multiplier;
             const inCartQty = cart[item.id] || 0;
+            const isQrHighlighted = highlightedItem?.id === item.id;
 
             return (
               <div
                 key={item.id}
                 className={`bg-white rounded-2xl border transition-all overflow-hidden shadow-sm ${
-                  inCartQty > 0
+                  isQrHighlighted
+                    ? 'border-emerald-500 ring-2 ring-emerald-500/60 shadow-emerald-500/10'
+                    : inCartQty > 0
                     ? 'border-emerald-500 ring-1 ring-emerald-500'
                     : 'border-slate-200/90'
                 }`}

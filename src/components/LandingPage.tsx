@@ -49,7 +49,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   setNewShopForm,
   onCreateNewShop,
   userEmail,
-  onOpenAuthModal,
 }) => {
   const [openFaq, setOpenFaq] = useState(0);
 

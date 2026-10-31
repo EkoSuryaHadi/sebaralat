@@ -6,6 +6,10 @@ import {
   formatRp,
   addDaysToIsoDate,
   calculateCartSummary,
+  computeShopAvailabilityMap,
+  getDurationMultiplier,
+  resolveEffectiveRole,
+  sanitizeItemForRole,
   buildWhatsappCheckoutMessage,
   NewShopSchema,
   NewItemSchema,
@@ -16,6 +20,7 @@ import {
   mapShopFromDb,
   mapShopToDb,
   mapItemFromDb,
+  mapItemToDb,
   mapBookingFromDb,
 } from '../supabase.ts';
 import { DEFAULT_ITEMS, DURATION_OPTIONS } from '../../data/mockData.ts';
@@ -209,5 +214,88 @@ describe('Validasi Skema Zod & Keamanan Data Mapper', () => {
     });
     assert.equal(booking.code, 'SBR-261030-9999');
     assert.equal(booking.status, 'confirmed');
+  });
+
+  it('P0-2: getDurationMultiplier menghitung tarif diskon durasi resmi secara deterministik', () => {
+    assert.equal(getDurationMultiplier(1), 1);
+    assert.equal(getDurationMultiplier(2), 2);
+    assert.equal(getDurationMultiplier(3), 2.7);
+    assert.equal(getDurationMultiplier(7), 5.25);
+    assert.equal(getDurationMultiplier(10), 7.5);
+    assert.equal(getDurationMultiplier(0), 1);
+  });
+
+  it('P0-3: sanitizeItemForRole menyembunyikan renterNote dari role customer tetapi tetap utuh bagi owner/staff', () => {
+    const rentedItem = DEFAULT_ITEMS[1]; // Genset dengan renterNote: 'Pak Budi - Proyek Ruko MT Haryono'
+    const forCustomer = sanitizeItemForRole(rentedItem, 'customer');
+    const forStaff = sanitizeItemForRole(rentedItem, 'staff');
+    const forOwner = sanitizeItemForRole(rentedItem, 'owner');
+
+    assert.equal(forCustomer.renterNote, '');
+    assert.equal(forStaff.renterNote, 'Pak Budi - Proyek Ruko MT Haryono');
+    assert.equal(forOwner.renterNote, 'Pak Budi - Proyek Ruko MT Haryono');
+  });
+
+  it('P1-2: mapItemToDb dan mapItemFromDb mempertahankan teks availableAt ("Minggu, 1 Nov (14:00)") tanpa terhapus jadi null', () => {
+    const item = {
+      ...DEFAULT_ITEMS[1],
+      availableAt: 'Minggu, 1 Nov (14:00 WITA)',
+    };
+    const dbRow = mapItemToDb(item);
+    assert.equal(dbRow.available_at, 'Minggu, 1 Nov (14:00 WITA)');
+
+    const roundTrip = mapItemFromDb(dbRow);
+    assert.equal(roundTrip.availableAt, 'Minggu, 1 Nov (14:00 WITA)');
+  });
+
+  it('P1-3: resolveEffectiveRole memblokir devSimulatedRole pada toko riil saat Supabase aktif', () => {
+    assert.equal(
+      resolveEffectiveRole({
+        authenticatedRole: undefined,
+        devSimulatedRole: 'owner',
+        isSupabaseConfigured: true,
+        activeShopSlug: 'samarinda-kamera',
+      }),
+      'customer'
+    );
+    assert.equal(
+      resolveEffectiveRole({
+        authenticatedRole: undefined,
+        devSimulatedRole: 'owner',
+        isSupabaseConfigured: true,
+        activeShopSlug: 'borneo-rental',
+      }),
+      'owner'
+    );
+    assert.equal(
+      resolveEffectiveRole({
+        authenticatedRole: 'staff',
+        devSimulatedRole: 'owner',
+        isSupabaseConfigured: true,
+        activeShopSlug: 'samarinda-kamera',
+      }),
+      'staff'
+    );
+  });
+
+  it('P1-5: computeShopAvailabilityMap & calculateCartSummary mengembalikan 0 untuk unit berstatus rented meskipun stock > 0', () => {
+    const availMap = computeShopAvailabilityMap({
+      items: DEFAULT_ITEMS,
+      bookings: [],
+      activeShopSlug: 'borneo-rental',
+      startDate: '2026-11-01',
+      durationDays: 2,
+    });
+    const gensetRented = DEFAULT_ITEMS[1]; // status: 'rented', stock: 1
+    assert.equal(availMap[gensetRented.id], 0);
+
+    const summary = calculateCartSummary(
+      { [gensetRented.id]: 1 },
+      DEFAULT_ITEMS,
+      DURATION_OPTIONS[0],
+      { [gensetRented.id]: 1 } // bahkan jika availabilityMap basi bernilai 1, status 'rented' wajib ditolak
+    );
+    assert.equal(summary.totalUnits, 0);
+    assert.equal(summary.totalCost, 0);
   });
 });

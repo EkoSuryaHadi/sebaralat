@@ -1,9 +1,64 @@
 import { z } from 'zod';
-import type { RentalItem, DurationOption } from '../types/index.ts';
+import type { RentalItem, DurationOption, Booking, Role } from '../types/index.ts';
 
 // =========================================================
-// UTILITAS SANITASI & PERHITUNGAN MURNI
+// UTILITAS SANITASI, KEAMANAN ROLE & PERHITUNGAN MURNI
 // =========================================================
+
+export const DEMO_SHOP_SLUGS = new Set(['borneo-rental', 'kaltim-kamera']);
+
+export function isDemoShopSlug(slug?: string | null): boolean {
+  if (!slug) return false;
+  return DEMO_SHOP_SLUGS.has(slug.trim().toLowerCase());
+}
+
+/**
+ * Menentukan role efektif pengguna.
+ * P1-3: Saat Supabase aktif di produksi, simulasi devSimulatedRole HANYA diizinkan pada toko showcase demo.
+ */
+export function resolveEffectiveRole(params: {
+  authenticatedRole?: Role | null;
+  devSimulatedRole: Role;
+  isSupabaseConfigured: boolean;
+  activeShopSlug?: string | null;
+}): Role {
+  const { authenticatedRole, devSimulatedRole, isSupabaseConfigured, activeShopSlug } = params;
+  if (authenticatedRole === 'owner' || authenticatedRole === 'staff') {
+    return authenticatedRole;
+  }
+  if (!isSupabaseConfigured || isDemoShopSlug(activeShopSlug)) {
+    return devSimulatedRole;
+  }
+  return 'customer';
+}
+
+/**
+ * P0-3: Menyembunyikan catatan internal peminjam (renterNote) dari pelanggan publik (anon/customer).
+ */
+export function sanitizeItemForRole(item: RentalItem, role: Role): RentalItem {
+  if (role === 'owner' || role === 'staff') {
+    return item;
+  }
+  if (!item.renterNote) {
+    return item;
+  }
+  return {
+    ...item,
+    renterNote: '',
+  };
+}
+
+/**
+ * P0-2: Perhitungan deterministik multiplier tarif sewa berdasarkan durasi hari (identik dengan SQL duration_multiplier).
+ */
+export function getDurationMultiplier(durationDays: number): number {
+  if (!Number.isFinite(durationDays) || durationDays <= 1) return 1;
+  const days = Math.floor(durationDays);
+  if (days === 2) return 2;
+  if (days >= 7) return Number((days * 0.75).toFixed(2));
+  if (days >= 3) return Number((days * 0.9).toFixed(2));
+  return days;
+}
 
 export function sanitizeSlug(input: string): string {
   return input
@@ -54,6 +109,49 @@ export interface CalculatedCartSummary {
   totalCost: number;
 }
 
+/**
+ * P1-5: Menghitung ketersediaan stok per item berdasarkan status operasional dan jadwal booking aktif.
+ * Jika status item bukan 'available' ('rented' atau 'maintenance'), stok tersedia wajib 0.
+ */
+export function computeShopAvailabilityMap(params: {
+  items: RentalItem[];
+  bookings: Booking[];
+  activeShopSlug: string;
+  startDate: string;
+  durationDays: number;
+}): Record<string, number> {
+  const { items, bookings, activeShopSlug, startDate, durationDays } = params;
+  const endDate = addDaysToIsoDate(startDate, durationDays);
+  const map: Record<string, number> = {};
+  const shopItems = items.filter((i) => i.shopSlug === activeShopSlug);
+
+  for (const item of shopItems) {
+    if (item.status !== 'available') {
+      map[item.id] = 0;
+      continue;
+    }
+    const reserved = bookings
+      .filter(
+        (b) =>
+          b.shopSlug === activeShopSlug &&
+          (b.status === 'confirmed' || b.status === 'picked_up') &&
+          b.startDate <= endDate &&
+          b.endDate >= startDate
+      )
+      .reduce((acc, b) => {
+        const lineQty =
+          b.lines
+            ?.filter((ln) => ln.itemId === item.id)
+            .reduce((s, ln) => s + ln.qty, 0) || 0;
+        return acc + lineQty;
+      }, 0);
+
+    map[item.id] = Math.max(0, item.stock - reserved);
+  }
+
+  return map;
+}
+
 export function calculateCartSummary(
   cart: Record<string, number>,
   items: RentalItem[],
@@ -63,22 +161,22 @@ export function calculateCartSummary(
   const selectedList: (RentalItem & { qty: number; subtotal: number })[] = [];
   let totalUnits = 0;
   let totalCost = 0;
+  const effectiveMultiplier = getDurationMultiplier(durationOption.days);
 
   Object.entries(cart).forEach(([itemId, qty]) => {
     const item = items.find((i) => i.id === itemId);
-    if (!item || item.status === 'maintenance' || qty <= 0) return;
+    // P1-5: Unit yang sedang disewa ('rented') atau dalam perawatan ('maintenance') tidak bisa masuk keranjang
+    if (!item || item.status !== 'available' || qty <= 0) return;
 
     const maxAvail =
       availabilityMap && typeof availabilityMap[item.id] === 'number'
         ? availabilityMap[item.id]
-        : item.status === 'available'
-        ? item.stock
-        : 0;
+        : item.stock;
 
     if (maxAvail <= 0) return;
 
     const validQty = Math.min(qty, maxAvail);
-    const subtotal = Math.round(item.pricePerDay * durationOption.multiplier * validQty);
+    const subtotal = Math.round(item.pricePerDay * effectiveMultiplier * validQty);
     selectedList.push({
       ...item,
       qty: validQty,

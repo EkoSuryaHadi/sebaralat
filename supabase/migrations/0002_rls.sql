@@ -125,10 +125,29 @@ CREATE POLICY "shop_invites_owner_all" ON public.shop_invites
   WITH CHECK (public.is_shop_member(shop_slug, ARRAY['owner']));
 
 -- Kebijakan rental_items:
--- Publik boleh membaca katalog item
+-- Publik boleh membaca katalog item, NAMUN kolom internal sensitif (renter_note) dicabut dari role anon (P0-3 PII Protection)
 DROP POLICY IF EXISTS "rental_items_public_select" ON public.rental_items;
 CREATE POLICY "rental_items_public_select" ON public.rental_items
   FOR SELECT USING (true);
+
+REVOKE SELECT ON public.rental_items FROM anon;
+GRANT SELECT (
+  id,
+  shop_slug,
+  sku,
+  name,
+  category,
+  icon_type,
+  price_per_day,
+  status,
+  stock,
+  available_at,
+  specs,
+  image_bg,
+  image_url,
+  created_at,
+  updated_at
+) ON public.rental_items TO anon;
 
 -- Hanya Owner yang boleh menambah (INSERT) dan menghapus (DELETE) unit
 DROP POLICY IF EXISTS "rental_items_owner_insert" ON public.rental_items;
@@ -219,8 +238,12 @@ BEGIN
       v_action := format('Memperbarui stok fisik "%s" dari %s menjadi %s unit', NEW.name, OLD.stock, NEW.stock);
     ELSIF NEW.price_per_day IS DISTINCT FROM OLD.price_per_day THEN
       v_action := format('Mengubah tarif sewa "%s" menjadi Rp%s/hari', NEW.name, NEW.price_per_day);
-    ELSE
+    ELSIF NEW.available_at IS DISTINCT FROM OLD.available_at OR NEW.renter_note IS DISTINCT FROM OLD.renter_note THEN
+      v_action := format('Memperbarui jadwal kembali / catatan peminjam unit "%s"', NEW.name);
+    ELSIF NEW.name IS DISTINCT FROM OLD.name OR NEW.sku IS DISTINCT FROM OLD.sku OR NEW.category IS DISTINCT FROM OLD.category OR NEW.specs IS DISTINCT FROM OLD.specs OR NEW.image_url IS DISTINCT FROM OLD.image_url THEN
       v_action := format('Memperbarui rincian unit "%s"', NEW.name);
+    ELSE
+      RETURN NEW;
     END IF;
   END IF;
 

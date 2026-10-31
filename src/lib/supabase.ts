@@ -187,33 +187,29 @@ export const mapShopToDb = (shop: Shop): Omit<ShopDbRow, 'is_verified' | 'plan' 
   logo_url: shop.logoUrl || '',
 });
 
-export const mapItemFromDb = (row: RentalItemDbRow): RentalItem => ({
-  id: row.id,
-  shopSlug: row.shop_slug,
-  sku: row.sku || '',
-  name: row.name,
-  category: row.category,
-  iconType: row.icon_type || 'tent',
-  pricePerDay: Number(row.price_per_day),
-  status: row.status,
-  stock: Number(row.stock),
-  availableAt: row.available_at ? formatTimestampLabel(row.available_at, row.available_at) : '',
-  renterNote: row.renter_note || '',
-  lastUpdatedBy: row.last_updated_by || 'Owner',
-  specs: Array.isArray(row.specs) ? row.specs : [],
-  imageBg: row.image_bg || 'from-emerald-600 to-teal-800',
-  imageUrl: row.image_url || undefined,
-});
+export const mapItemFromDb = (row: RentalItemDbRow): RentalItem => {
+  const rawAvail = row.available_at?.trim() || '';
+  const isIsoTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawAvail);
+  return {
+    id: row.id,
+    shopSlug: row.shop_slug,
+    sku: row.sku || '',
+    name: row.name,
+    category: row.category,
+    iconType: row.icon_type || 'tent',
+    pricePerDay: Number(row.price_per_day),
+    status: row.status,
+    stock: Number(row.stock),
+    availableAt: isIsoTimestamp ? formatTimestampLabel(rawAvail, rawAvail) : rawAvail,
+    renterNote: row.renter_note || '',
+    lastUpdatedBy: row.last_updated_by || 'Owner',
+    specs: Array.isArray(row.specs) ? row.specs : [],
+    imageBg: row.image_bg || 'from-emerald-600 to-teal-800',
+    imageUrl: row.image_url || undefined,
+  };
+};
 
 export const mapItemToDb = (item: RentalItem): RentalItemDbRow => {
-  let isoAvailableAt: string | null = null;
-  if (item.availableAt && item.availableAt.trim()) {
-    const parsed = new Date(item.availableAt);
-    if (!Number.isNaN(parsed.getTime())) {
-      isoAvailableAt = parsed.toISOString();
-    }
-  }
-
   return {
     id: item.id,
     shop_slug: item.shopSlug,
@@ -224,7 +220,7 @@ export const mapItemToDb = (item: RentalItem): RentalItemDbRow => {
     price_per_day: item.pricePerDay,
     status: item.status,
     stock: item.stock,
-    available_at: isoAvailableAt,
+    available_at: item.availableAt ? item.availableAt.trim() : '',
     renter_note: item.renterNote || '',
     last_updated_by: item.lastUpdatedBy || 'Owner',
     specs: item.specs || [],

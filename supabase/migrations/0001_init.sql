@@ -109,7 +109,7 @@ CREATE TABLE public.rental_items (
   price_per_day NUMERIC NOT NULL CHECK (price_per_day > 0),
   status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'rented', 'maintenance')),
   stock INTEGER NOT NULL DEFAULT 1 CHECK (stock >= 0),
-  available_at TIMESTAMPTZ,
+  available_at TEXT NOT NULL DEFAULT '' CHECK (char_length(available_at) <= 120),
   renter_note TEXT NOT NULL DEFAULT '' CHECK (char_length(renter_note) <= 300),
   last_updated_by TEXT NOT NULL DEFAULT 'Owner',
   specs JSONB NOT NULL DEFAULT '[]'::jsonb,

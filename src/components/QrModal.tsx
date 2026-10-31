@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Printer, Copy, Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RentalItem, Shop } from '../types';
@@ -21,15 +21,10 @@ export const QrModal: React.FC<QrModalProps> = ({
   onPrint,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [baseUrl, setBaseUrl] = useState('');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setBaseUrl(window.location.origin);
-    }
-  }, []);
 
   if (!isOpen) return null;
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   const targetUrl = baseUrl
     ? `${baseUrl}/${shop.slug}${selectedQrItem ? `?item=${selectedQrItem.id}` : ''}`
