@@ -609,9 +609,9 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="flex items-center gap-2.5 text-emerald-400 text-xs font-semibold tracking-wide">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="flex items-center gap-2.5 text-accent-text text-xs font-semibold tracking-wide">
+          <span className="w-2.5 h-2.5 rounded-full bg-accent animate-ping" />
           Memuat Platform Sebaraja...
         </div>
       </div>
@@ -621,12 +621,12 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   // Tampilan transisi loading jika user sudah login dan sedang dialihkan ke tokonya dari root
   if (!initialShopSlug && user && memberships.length > 0) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-3 text-white">
-        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center animate-spin">
+      <div className="min-h-screen bg-bg flex flex-col items-center justify-center space-y-3 text-fg">
+        <div className="w-10 h-10 rounded-2xl bg-accent-soft border border-accent/30 text-accent-text flex items-center justify-center animate-spin">
           <Sparkles className="w-5 h-5" />
         </div>
-        <p className="text-xs text-slate-300">
-          Mengalihkan ke Panel Toko <span className="font-mono text-emerald-400 font-bold">/{memberships[0].shopSlug}</span>...
+        <p className="text-xs text-muted">
+          Mengalihkan ke Panel Toko <span className="font-mono text-accent-text font-bold">/{memberships[0].shopSlug}</span>...
         </p>
       </div>
     );
@@ -635,19 +635,19 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   // Tampilan 404 ketika pengguna mengakses slug toko yang tidak terdaftar
   if (viewMode !== 'saas_home' && !shop) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-sm w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+      <div className="min-h-screen bg-bg aurora text-fg flex items-center justify-center p-6">
+        <div className="max-w-sm w-full glass-strong rounded-[var(--radius-bento)] p-6 text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-warn-soft border border-warn/30 text-warn-text flex items-center justify-center mx-auto">
             <AlertTriangle className="w-6 h-6" />
           </div>
-          <h1 className="text-lg font-extrabold">Katalog Toko Tidak Ditemukan (404)</h1>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Tautan katalog <span className="font-mono text-emerald-400">/{activeShopSlug}</span>{' '}
+          <h1 className="font-display text-lg font-extrabold tracking-tight">Katalog Toko Tidak Ditemukan (404)</h1>
+          <p className="text-xs text-muted leading-relaxed">
+            Tautan katalog <span className="font-mono text-accent-text">/{activeShopSlug}</span>{' '}
             belum terdaftar atau sudah tidak aktif.
           </p>
           <button
             onClick={navigateToLandingHome}
-            className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1.5"
+            className="btn-brutal w-full py-3 text-xs flex items-center justify-center gap-1.5"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Kembali ke Beranda Sebaraja</span>
@@ -658,10 +658,10 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans pb-14">
+    <div className="min-h-screen bg-bg text-fg font-sans pb-14 selection:bg-pop selection:text-[#0c110f]">
       {toastMsg && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-100 bg-slate-900 text-white px-4 py-2.5 rounded-full shadow-2xl border border-emerald-500/40 flex items-center gap-2 text-xs font-semibold">
-          <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-100 glass-strong text-fg px-4 py-2.5 rounded-full shadow-2xl border border-accent/40 flex items-center gap-2 text-xs font-semibold animate-rise">
+          <Sparkles className="w-4 h-4 text-accent-text shrink-0" />
           <span>{toastMsg}</span>
         </div>
       )}
@@ -694,7 +694,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       )}
 
       {viewMode !== 'saas_home' && shop && (
-        <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl relative overflow-hidden sm:border-x border-slate-200">
+        <div className={`mx-auto min-h-screen transition-all ${viewMode === 'catalog' ? 'max-w-md sm:max-w-xl bg-surface sm:border-x border-line shadow-xl' : 'max-w-5xl'}`}>
           {viewMode === 'catalog' && (
             <CatalogView
               shop={shop}

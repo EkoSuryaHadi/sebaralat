@@ -66,7 +66,8 @@ export default function ShopPage({ params }: PageProps) {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400 text-xs">
+        <div className="min-h-screen bg-bg flex items-center justify-center text-accent-text text-xs font-semibold">
+          <span className="w-2 h-2 rounded-full bg-accent animate-ping mr-2" />
           Memuat Katalog...
         </div>
       }

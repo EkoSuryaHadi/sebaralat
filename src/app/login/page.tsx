@@ -21,6 +21,7 @@ import {
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { isDemoShopSlug } from '@/lib/validators';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 function LoginFormContent() {
   const router = useRouter();
@@ -143,23 +144,23 @@ function LoginFormContent() {
   if (isRedirecting || (user && memberships.length > 0)) {
     const targetShop = shopParam || (memberships.length > 0 ? memberships[0].shopSlug : '');
     return (
-      <div className="w-full max-w-md mx-auto">
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl shadow-2xl text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+      <div className="w-full max-w-md mx-auto animate-rise">
+        <div className="glass-strong rounded-bento p-8 text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent-soft border border-accent/30 text-accent-text">
             <Loader2 className="w-7 h-7 animate-spin" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-white">Login Berhasil!</h2>
-            <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+            <h2 className="font-display text-xl font-extrabold tracking-tight text-fg">Login Berhasil!</h2>
+            <p className="text-xs text-muted mt-1 leading-relaxed">
               Sedang mengalihkan Anda langsung ke Panel Toko{' '}
-              {targetShop && <strong className="text-emerald-400 font-mono">/{targetShop}</strong>}...
+              {targetShop && <strong className="text-accent-text font-mono">/{targetShop}</strong>}...
             </p>
           </div>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-subtle">
             Jika halaman tidak berpindah otomatis dalam beberapa detik,{' '}
             <button
               onClick={() => handleProceed(targetShop ? `/${targetShop}?view=workspace` : '/')}
-              className="text-emerald-400 underline font-bold"
+              className="text-accent-text underline font-bold cursor-pointer"
             >
               klik di sini
             </button>
@@ -171,46 +172,46 @@ function LoginFormContent() {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto animate-rise" style={{ animationDelay: '80ms' }}>
       {/* KARTU UTAMA LOGIN */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+      <div className="glass-strong rounded-bento p-6 sm:p-8 relative overflow-hidden">
         {/* Glow aksen di pojok kartu */}
-        <div className="absolute -top-12 -right-12 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-12 -right-12 w-36 h-36 bg-accent-soft rounded-full blur-2xl pointer-events-none" />
 
         {/* HEADER FORM */}
-        <div className="text-center space-y-2 mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-2">
+        <div className="relative space-y-2 mb-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft border border-accent/30 text-accent-text mb-2">
             <Lock className="w-6 h-6" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">
             Portal Pengelola Toko
           </h1>
-          <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+          <p className="text-xs text-muted max-w-xs leading-relaxed">
             Masuk untuk mengelola katalog, inventaris barang, ketersediaan unit, dan order sewa.
           </p>
         </div>
 
         {/* JIKA SUDAH TERAUTENTIKASI TETAPI BELUM MEMILIKI TOKO */}
         {user && !authLoading && memberships.length === 0 ? (
-          <div className="space-y-5">
-            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center gap-2.5 text-emerald-300">
-                <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
+          <div className="relative space-y-5">
+            <div className="bg-accent-soft border border-accent/30 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-2.5 text-accent-text">
+                <CheckCircle2 className="w-5 h-5 shrink-0 text-accent-text" />
                 <div className="text-xs">
-                  <span className="text-slate-400 block text-[11px]">Anda masuk sebagai:</span>
-                  <strong className="text-white font-bold">{user.email}</strong>
+                  <span className="text-muted block text-[11px]">Anda masuk sebagai:</span>
+                  <strong className="text-fg font-bold">{user.email}</strong>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-300 pt-1 leading-relaxed">
+              <p className="text-xs text-fg-soft pt-1 leading-relaxed">
                 Akun Anda belum terikat ke toko rental manapun. Silakan daftarkan toko rental perdana Anda sekarang.
               </p>
             </div>
 
-            <div className="space-y-2.5 pt-2">
+            <div className="space-y-3 pt-2">
               <Link
                 href="/#daftar-toko"
-                className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition"
+                className="btn-brutal w-full py-3 px-4 text-sm"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>Daftarkan Toko Rental Baru</span>
@@ -224,49 +225,49 @@ function LoginFormContent() {
                   setOtpInput('');
                   setInfoMsg('');
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition cursor-pointer"
+                className="btn-glass w-full py-2.5 px-4 text-xs"
               >
-                <LogOut className="w-4 h-4 text-rose-400" />
+                <LogOut className="w-4 h-4 text-danger-text" />
                 <span>Ganti Akun / Keluar</span>
               </button>
             </div>
           </div>
         ) : (
           /* JIKA BELUM TERAUTENTIKASI (FORM EMAIL & OTP) */
-          <div className="space-y-4">
+          <div className="relative space-y-4">
             {/* BADGE JAMINAN KEAMANAN */}
-            <div className="bg-emerald-950/40 border border-emerald-800/40 rounded-2xl p-3 text-xs text-emerald-300 flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <div className="text-[11px] leading-relaxed text-slate-300">
-                <strong className="text-emerald-300 font-bold">Tanpa Password Rumit:</strong> Masuk
+            <div className="bg-accent-soft border border-accent/25 rounded-2xl p-3 text-xs flex items-start gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-accent-text shrink-0 mt-0.5" />
+              <div className="text-[11px] leading-relaxed text-fg-soft">
+                <strong className="text-accent-text font-bold">Tanpa Password Rumit:</strong> Masuk
                 aman cukup dengan tautan Magic Link atau kode OTP 6 digit yang dikirimkan ke email Anda.
               </div>
             </div>
 
             {/* NOTIFIKASI ERROR / INFO */}
             {errorMsg && (
-              <div className="bg-rose-950/60 border border-rose-800/50 rounded-xl p-3 text-xs text-rose-300 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="bg-danger-soft border border-danger/30 rounded-xl p-3 text-xs text-danger-text flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-danger-text shrink-0 mt-0.5" />
                 <span className="text-[11px] leading-relaxed">{errorMsg}</span>
               </div>
             )}
 
             {infoMsg && (
-              <div className="bg-teal-950/60 border border-teal-800/50 rounded-xl p-3 text-xs text-teal-300 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+              <div className="bg-accent-soft border border-accent/30 rounded-xl p-3 text-xs text-accent-text flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-accent-text shrink-0 mt-0.5" />
                 <span className="text-[11px] leading-relaxed">{infoMsg}</span>
               </div>
             )}
 
             {/* FORM STEP 1: INPUT EMAIL */}
             {step === 'email' && (
-              <form onSubmit={handleRequestOtp} className="space-y-3.5">
+              <form onSubmit={handleRequestOtp} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-bold text-fg-soft mb-1.5">
                     Alamat Email Terdaftar
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <Mail className="w-4 h-4 text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="email"
                       required
@@ -274,7 +275,7 @@ function LoginFormContent() {
                       placeholder="owner@tokorental.com"
                       value={emailInput}
                       onChange={(e) => setEmailInput(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                      className="field pl-10!"
                     />
                   </div>
                 </div>
@@ -282,7 +283,7 @@ function LoginFormContent() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition cursor-pointer"
+                  className="btn-brutal w-full py-3 px-4 text-sm"
                 >
                   {loading ? (
                     <>
@@ -292,7 +293,7 @@ function LoginFormContent() {
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      <span>Kirim Magic Link & Kode OTP</span>
+                      <span>Kirim Magic Link &amp; Kode OTP</span>
                     </>
                   )}
                 </button>
@@ -302,14 +303,14 @@ function LoginFormContent() {
             {/* FORM STEP 2: CEK EMAIL & VERIFIKASI */}
             {step === 'otp' && (
               <div className="space-y-4">
-                <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 text-center space-y-3">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <div className="bg-surface-2 border border-line rounded-2xl p-4 text-center space-y-3">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-accent-soft border border-accent/30 flex items-center justify-center text-accent-text">
                     <Mail className="w-6 h-6 animate-pulse" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">Tautan Masuk Telah Dikirim!</h3>
-                    <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                      Buka email di <strong className="text-emerald-400 font-mono">{emailInput}</strong> dan cukup klik tombol <strong className="text-white">&ldquo;Log In&rdquo;</strong> untuk masuk langsung secara otomatis.
+                    <h3 className="font-display text-base font-bold text-fg">Tautan Masuk Telah Dikirim!</h3>
+                    <p className="text-xs text-muted mt-1.5 leading-relaxed">
+                      Buka email di <strong className="text-accent-text font-mono">{emailInput}</strong> dan cukup klik tombol <strong className="text-fg">&ldquo;Log In&rdquo;</strong> untuk masuk langsung secara otomatis.
                     </p>
                   </div>
 
@@ -319,28 +320,28 @@ function LoginFormContent() {
                         href="https://mail.google.com"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition inline-flex items-center gap-1.5"
+                        className="btn-glass py-2 px-3.5 text-xs"
                       >
-                        <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                        <ExternalLink className="w-3.5 h-3.5 text-accent-text" />
                         <span>Buka Gmail</span>
                       </a>
                     ) : (
-                      <span className="text-[11px] text-slate-400 italic">
+                      <span className="text-[11px] text-muted italic">
                         Periksa folder Inbox atau Spam / Promosi jika belum muncul.
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400 truncate max-w-50">{emailInput}</span>
+                <div className="bg-surface-2 border border-line rounded-xl p-2.5 flex items-center justify-between text-[11px]">
+                  <span className="text-muted truncate max-w-50">{emailInput}</span>
                   <button
                     type="button"
                     onClick={() => {
                       setStep('email');
                       setErrorMsg('');
                     }}
-                    className="text-emerald-400 hover:text-emerald-300 font-bold underline cursor-pointer"
+                    className="text-accent-text hover:opacity-80 font-bold underline cursor-pointer"
                   >
                     Ganti Email
                   </button>
@@ -348,18 +349,18 @@ function LoginFormContent() {
 
                 {/* Alternatif Kode OTP jika ada */}
                 <form onSubmit={handleVerifyOtp} className="space-y-3 pt-1">
-                  <div className="text-[11px] text-slate-400 font-medium text-center">
+                  <div className="text-[11px] text-muted font-medium text-center">
                     Atau jika email Anda menyertakan 6 digit kode, masukkan di bawah:
                   </div>
                   <div className="relative">
-                    <KeyRound className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <KeyRound className="w-4 h-4 text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
                       maxLength={8}
                       placeholder="Contoh: 123456"
                       value={otpInput}
                       onChange={(e) => setOtpInput(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-center text-xs tracking-widest font-mono text-emerald-400 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                      className="field pl-10! text-center tracking-widest font-mono font-bold text-accent-text!"
                     />
                   </div>
 
@@ -367,7 +368,7 @@ function LoginFormContent() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition cursor-pointer"
+                      className="btn-brutal w-full py-3 px-4 text-sm"
                     >
                       {loading ? (
                         <>
@@ -388,7 +389,7 @@ function LoginFormContent() {
                   type="button"
                   onClick={handleRequestOtp}
                   disabled={loading}
-                  className="w-full py-2 text-center text-[11px] font-bold text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                  className="w-full py-2 text-center text-[11px] font-bold text-muted hover:text-fg transition cursor-pointer disabled:opacity-50"
                 >
                   Belum terima email? Kirim ulang
                 </button>
@@ -397,12 +398,12 @@ function LoginFormContent() {
 
             {/* MODE SIMULATOR DEMO (HANYA UNTUK TOKO DEMO SHOWCASE ATAU TANPA SUPABASE) */}
             {(!isSupabaseConfigured || !shopParam || isDemoShopSlug(shopParam)) && (
-              <div className="pt-4 border-t border-slate-800/80 space-y-2.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400 font-semibold">
+              <div className="pt-4 border-t border-line space-y-2.5">
+                <div className="flex items-center justify-between gap-2 text-[11px]">
+                  <span className="text-muted font-semibold">
                     Mode Uji Coba Toko Demo (/borneo-rental):
                   </span>
-                  <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md font-mono">
+                  <span className="chip font-mono text-[10px]!">
                     Sandbox
                   </span>
                 </div>
@@ -410,17 +411,17 @@ function LoginFormContent() {
                   <button
                     type="button"
                     onClick={() => handleDevLogin('owner', shopParam || 'borneo-rental')}
-                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    className="btn-glass py-2.5 px-3 text-[11px]"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <Sparkles className="w-3.5 h-3.5 text-warn-text" />
                     <span>Demo Owner</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDevLogin('staff', shopParam || 'borneo-rental')}
-                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    className="btn-glass py-2.5 px-3 text-[11px]"
                   >
-                    <UserCheck className="w-3.5 h-3.5 text-teal-400" />
+                    <UserCheck className="w-3.5 h-3.5 text-info-text" />
                     <span>Demo Staf</span>
                   </button>
                 </div>
@@ -432,9 +433,9 @@ function LoginFormContent() {
 
       {/* FOOTER INFORMASI & BANTUAN */}
       <div className="text-center mt-6 space-y-2">
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-muted">
           Belum punya katalog usaha rental?{' '}
-          <Link href="/#daftar-toko" className="text-emerald-400 hover:underline font-bold">
+          <Link href="/#daftar-toko" className="text-accent-text hover:underline font-bold">
             Buat Katalog Gratis di Sini
           </Link>
         </p>
@@ -445,43 +446,102 @@ function LoginFormContent() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-slate-950 text-white selection:bg-emerald-500 selection:text-slate-950 flex flex-col">
+    <div className="relative min-h-screen bg-bg aurora text-fg flex flex-col overflow-hidden">
       {/* NAVBAR SEDERHANA */}
-      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-20 px-3 sm:px-6 pt-3">
+        <div className="glass max-w-6xl mx-auto rounded-2xl px-3 sm:px-5 h-14 flex items-center justify-between gap-2">
           <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
+            <Image
+              src="/logo.svg"
+              alt="Sebaraja"
+              width={140}
+              height={36}
+              className="h-7 sm:h-8 w-auto object-contain dark:hidden"
+              priority
+            />
             <Image
               src="/logo-dark.svg"
               alt="Sebaraja"
               width={140}
               height={36}
-              className="h-8 w-auto object-contain"
+              className="h-7 sm:h-8 w-auto object-contain hidden dark:block"
               priority
             />
           </Link>
 
-          <Link
-            href="/"
-            className="text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-xl transition"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Kembali ke Beranda</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="btn-glass px-3 py-2 text-xs"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Kembali ke Beranda</span>
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
-      {/* AREA KONTEN TENGAH */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 py-12">
-        <Suspense
-          fallback={
-            <div className="w-full max-w-md mx-auto bg-slate-900/50 border border-slate-800 rounded-3xl p-8 flex flex-col items-center justify-center space-y-3">
-              <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
-              <p className="text-xs text-slate-400">Memuat formulir masuk...</p>
+      {/* AREA KONTEN: SPLIT LAYOUT */}
+      <main className="flex-1 w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 lg:gap-12 items-center px-4 sm:px-6 py-10 lg:py-14">
+        {/* PANEL BRAND (KIRI) */}
+        <section className="relative hidden lg:block">
+          <div className="grid-lines absolute -inset-10 pointer-events-none" aria-hidden="true" />
+          <div className="relative space-y-6 animate-rise">
+            <span className="chip">
+              <Sparkles className="w-3.5 h-3.5 text-accent-text" />
+              Panel Pengelola Sebaraja
+            </span>
+            <h2 className="font-display font-extrabold tracking-tight text-5xl xl:text-6xl leading-[1.02] text-fg">
+              Kelola rental Anda, <span className="text-gradient">tanpa ribet.</span>
+            </h2>
+            <p className="text-sm text-muted max-w-md leading-relaxed">
+              Katalog online, stok real-time, dan order sewa via WhatsApp — semua dalam satu panel.
+            </p>
+
+            <div className="grid grid-cols-6 gap-3 max-w-lg">
+              <div className="bento col-span-4 p-5 space-y-2">
+                <div className="w-9 h-9 rounded-xl bg-accent-soft text-accent-text flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <p className="font-display text-base font-bold text-fg">Login tanpa password</p>
+                <p className="text-xs text-muted leading-relaxed">Magic Link atau OTP 6 digit langsung ke email.</p>
+              </div>
+              <div className="bento col-span-2 p-5 flex flex-col justify-between bg-pop! border-ink/20">
+                <Sparkles className="w-5 h-5 text-[#0c110f]" />
+                <p className="font-display text-2xl font-extrabold text-[#0c110f] leading-none">
+                  Real-time
+                </p>
+              </div>
+              <div className="bento col-span-2 p-5 space-y-2">
+                <UserCheck className="w-5 h-5 text-info-text" />
+                <p className="text-xs font-bold text-fg">Owner &amp; Staf</p>
+              </div>
+              <div className="bento col-span-4 p-5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-surface-2 text-accent-text flex items-center justify-center shrink-0">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  Hak akses diverifikasi otomatis berdasarkan email terdaftar.
+                </p>
+              </div>
             </div>
-          }
-        >
-          <LoginFormContent />
-        </Suspense>
+          </div>
+        </section>
+
+        {/* KARTU AUTENTIKASI (KANAN) */}
+        <section className="w-full">
+          <Suspense
+            fallback={
+              <div className="w-full max-w-md mx-auto glass-strong rounded-bento p-8 flex flex-col items-center justify-center space-y-3">
+                <Loader2 className="w-6 h-6 text-accent-text animate-spin" />
+                <p className="text-xs text-muted">Memuat formulir masuk...</p>
+              </div>
+            }
+          >
+            <LoginFormContent />
+          </Suspense>
+        </section>
       </main>
     </div>
   );

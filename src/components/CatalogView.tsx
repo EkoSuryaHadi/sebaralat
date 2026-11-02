@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Shop, RentalItem, DurationOption, Role } from '../types';
 import { isProPlanActive } from '../lib/validators';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface CatalogViewProps {
   shop: Shop;
@@ -139,7 +140,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     return item.category === selectedCategory;
   });
 
-  // P1-4: Jika pelanggan datang dari scan QR fisik (?item=...), pastikan unit tersebut tampil di paling atas
   const filteredItems = highlightedItem
     ? [highlightedItem, ...baseFilteredItems.filter((i) => i.id !== highlightedItem.id)]
     : baseFilteredItems;
@@ -147,151 +147,158 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const isPro = isProPlanActive(shop) || Boolean(shop.isVerified);
 
   return (
-    <div className="pb-28 bg-slate-50 min-h-screen">
+    <div className="pb-32 bg-bg text-fg min-h-screen">
       {/* BANNER DEMO TOKO INTERAKTIF */}
       {(shop.slug === 'borneo-rental' || shop.slug === 'kaltim-kamera') && (
-        <div className="bg-linear-to-r from-emerald-950 via-slate-900 to-slate-950 text-white px-4 py-2.5 border-b border-emerald-500/30 flex items-center justify-between text-xs gap-2">
+        <aside aria-label="Demo notice" className="glass bg-accent-soft/80 text-fg px-4 py-2.5 border-b border-accent/30 flex items-center justify-between text-xs gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <span className="font-extrabold text-emerald-300 truncate">Demo Toko Aktif</span>
+            <span className="w-2 h-2 rounded-full bg-accent animate-pulse shrink-0" />
+            <span className="font-extrabold text-accent-text truncate">Demo Toko Aktif</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             {currentRole === 'customer' ? (
               <button
                 type="button"
                 onClick={() => onSwitchRole?.('owner')}
-                className="text-[11px] font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 shadow-sm"
+                className="btn-glass px-2.5 py-1 text-[11px] font-extrabold text-accent-text flex items-center gap-1"
               >
                 <span>Coba Panel Owner</span>
-                <span>→</span>
+                <span>&rarr;</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={onOpenWorkspace}
-                className="text-[11px] font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 shadow-sm"
+                className="btn-glass px-2.5 py-1 text-[11px] font-extrabold text-accent-text flex items-center gap-1"
               >
                 <span>Masuk Workspace ({currentRole.toUpperCase()})</span>
-                <span>→</span>
+                <span>&rarr;</span>
               </button>
             )}
           </div>
-        </div>
+        </aside>
       )}
 
       {/* HEADER RESMI TOKO RENTAL */}
-      <div className="bg-slate-900 text-white p-5 relative overflow-hidden">
-        <div className="flex items-start justify-between gap-3 relative z-10">
-          <div className="flex items-center gap-3.5">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 shadow-lg border border-white/15 bg-slate-800 flex items-center justify-center">
-              {shop.logoUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={shop.logoUrl}
-                  alt={shop.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-linear-to-br from-emerald-500 to-teal-700 flex items-center justify-center">
-                  <Tent className="w-7 h-7 text-white" />
-                </div>
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                {isPro ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider bg-linear-to-r from-emerald-500/25 to-teal-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-400/40 shadow-xs">
-                    <BadgeCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    Official Partner
-                  </span>
+      <header className="relative overflow-hidden aurora border-b border-line p-5 sm:p-6">
+        <div aria-hidden className="grid-lines pointer-events-none absolute inset-0 opacity-60" />
+        <div className="relative z-10 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shrink-0 shadow-md border border-line-strong bg-surface-2 flex items-center justify-center">
+                {shop.logoUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={shop.logoUrl}
+                    alt={shop.name}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-300 bg-white/10 px-2 py-0.5 rounded-full">
-                    Katalog Rental
-                  </span>
+                  <div className="w-full h-full bg-linear-to-br from-accent to-accent-strong flex items-center justify-center">
+                    <Tent className="w-7 h-7 text-accent-fg" />
+                  </div>
                 )}
-                <span className="inline-flex items-center gap-1 text-[10px] text-slate-300 bg-white/10 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Live Stok
-                </span>
               </div>
-              <h1 className="text-lg font-extrabold leading-snug mt-1 text-white">
-                {shop.name}
-              </h1>
-              <p className="text-[11px] text-slate-300 mt-0.5 line-clamp-1">
-                {shop.tagline || 'Katalog Resmi Penyewaan Alat & Unit Operasional'}
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {isPro ? (
+                    <span className="chip bg-accent-soft border-accent/40 text-accent-text font-extrabold text-[10px] uppercase">
+                      <BadgeCheck className="w-3.5 h-3.5 text-accent" />
+                      Official Partner
+                    </span>
+                  ) : (
+                    <span className="chip text-[10px]">
+                      Katalog Rental
+                    </span>
+                  )}
+                  <span className="chip text-[10px] bg-accent-soft/50 border-accent/20 text-accent-text">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                    Live Stok
+                  </span>
+                </div>
+                <h1 className="font-display text-xl sm:text-2xl font-extrabold tracking-tight leading-snug mt-1 text-fg truncate">
+                  {shop.name}
+                </h1>
+                <p className="text-xs text-muted mt-0.5 line-clamp-1">
+                  {shop.tagline || 'Katalog Resmi Penyewaan Alat & Unit Operasional'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <ThemeToggle />
+              <button
+                onClick={onCopyLink}
+                className="btn-glass p-2.5 rounded-xl"
+                title="Bagikan Katalog"
+                aria-label="Bagikan Katalog"
+              >
+                {copiedLink ? (
+                  <Check className="w-4 h-4 text-accent-text" />
+                ) : (
+                  <Share2 className="w-4 h-4 text-fg-soft" />
+                )}
+              </button>
             </div>
           </div>
 
-          <button
-            onClick={onCopyLink}
-            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/10 transition shrink-0"
-            title="Bagikan Katalog"
-          >
-            {copiedLink ? (
-              <Check className="w-4 h-4 text-emerald-400" />
-            ) : (
-              <Share2 className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-
-        {/* Bar Lokasi & Jam Operasional */}
-        <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300">
-          <span className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>{shop.location}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>{shop.hours}</span>
-          </span>
-        </div>
-
-        {/* Syarat & Ketentuan Sewa */}
-        <div className="mt-3 bg-slate-800/90 border border-slate-700 rounded-xl overflow-hidden">
-          <button
-            onClick={() => setShowTerms(!showTerms)}
-            className="w-full px-3.5 py-2 flex items-center justify-between text-left text-xs font-semibold text-slate-200 hover:bg-slate-800 transition"
-          >
-            <span className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-              Ketentuan & Jaminan Sewa
+          {/* Bar Lokasi & Jam Operasional */}
+          <div className="pt-3 border-t border-line flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+            <span className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-accent-text shrink-0" />
+              <span>{shop.location}</span>
             </span>
-            {showTerms ? (
-              <ChevronUp className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            )}
-          </button>
-          {showTerms && (
-            <ul className="px-4 pb-3 pt-1.5 text-[11px] text-slate-300 space-y-1.5 border-t border-slate-700/80 list-disc list-inside">
-              {(shop.terms || []).map((term, idx) => (
-                <li key={idx} className="leading-relaxed">
-                  {term}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-accent-text shrink-0" />
+              <span>{shop.hours}</span>
+            </span>
+          </div>
 
-      {/* KALKULATOR TANGGAL & DURASI SEWA */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 shadow-sm sticky top-0 z-30">
+          {/* Syarat & Ketentuan Sewa */}
+          <div className="glass rounded-2xl overflow-hidden border border-line">
+            <button
+              onClick={() => setShowTerms(!showTerms)}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between text-left text-xs font-bold text-fg-soft hover:bg-surface-2 transition cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-warn-text shrink-0" />
+                Ketentuan &amp; Jaminan Sewa
+              </span>
+              {showTerms ? (
+                <ChevronUp className="w-4 h-4 text-muted" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted" />
+              )}
+            </button>
+            {showTerms && (
+              <ul className="px-4 pb-3 pt-1 text-[11px] text-muted space-y-1.5 border-t border-line list-disc list-inside bg-surface-2/40">
+                {(shop.terms || []).map((term, idx) => (
+                  <li key={idx} className="leading-relaxed">
+                    {term}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* KALKULATOR TANGGAL & DURASI SEWA (STICKY GLASS) */}
+      <section aria-label="Jadwal sewa" className="glass sticky top-0 z-30 px-4 py-3 border-b border-line">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-            Pilih Jadwal & Durasi Sewa
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-accent-text" />
+            Pilih Jadwal &amp; Durasi Sewa
           </span>
           {currentDurationObj.discountTag && (
-            <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+            <span className="chip bg-accent-soft text-accent-text border-accent/30 font-extrabold text-[10px]">
               Promo {currentDurationObj.discountTag}
             </span>
           )}
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           <div>
-            <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">
+            <label className="block text-[10px] text-muted font-bold mb-1">
               Tanggal Ambil
             </label>
             <input
@@ -299,38 +306,38 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               min={minDate}
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="field text-xs font-semibold"
             />
           </div>
           <div>
-            <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">
+            <label className="block text-[10px] text-muted font-bold mb-1">
               Durasi Paket
             </label>
             <select
               value={durationDays}
               onChange={(e) => setDurationDays(Number(e.target.value))}
-              className="w-full text-xs font-bold bg-emerald-50/70 border border-emerald-300 rounded-xl px-3 py-2 text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="field text-xs font-bold text-accent-text border-accent/40 bg-accent-soft/30"
             >
               {durationOptions.map((opt) => (
-                <option key={opt.days} value={opt.days}>
+                <option key={opt.days} value={opt.days} className="bg-surface text-fg">
                   {opt.label}
                 </option>
               ))}
             </select>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* SEARCH & FILTER KATEGORI */}
-      <div className="p-4 space-y-3">
+      <section aria-label="Filter katalog" className="p-4 space-y-3">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-subtle absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Cari unit atau spesifikasi..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+            className="field pl-9 pr-4 text-xs"
           />
         </div>
 
@@ -339,33 +346,33 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === cat
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  ? 'bg-fg text-bg shadow-sm'
+                  : 'btn-glass text-muted'
               }`}
             >
               {cat}
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* DAFTAR ITEM KATALOG */}
-      <div className="px-4 space-y-3">
+      {/* DAFTAR ITEM KATALOG (BENTO CARDS) */}
+      <main aria-label="Daftar unit katalog" className="px-4 space-y-3">
         {highlightedItem && (
-          <div className="bg-emerald-950 text-white rounded-2xl p-3.5 border border-emerald-500/40 flex items-center justify-between gap-2 shadow-md">
+          <div className="bento bg-accent-soft border-accent/40 p-3.5 flex items-center justify-between gap-2 shadow-md">
             <div className="min-w-0">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 block">
+              <span className="chip bg-surface text-accent-text border-accent/30 text-[10px] font-extrabold uppercase">
                 🏷️ Unit dari Scan Label QR Fisik
               </span>
-              <p className="text-xs font-bold truncate mt-0.5">{highlightedItem.name}</p>
+              <p className="font-display text-sm font-bold text-fg truncate mt-1">{highlightedItem.name}</p>
             </div>
             {onClearHighlightedItem && (
               <button
                 type="button"
                 onClick={onClearHighlightedItem}
-                className="text-[11px] font-bold bg-white/10 hover:bg-white/20 text-emerald-300 px-2.5 py-1.5 rounded-xl shrink-0 transition cursor-pointer"
+                className="btn-glass text-[11px] font-bold text-accent-text px-2.5 py-1.5 shrink-0"
               >
                 Tampilkan Normal ✕
               </button>
@@ -374,9 +381,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         )}
 
         {filteredItems.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 text-center border border-slate-200">
-            <p className="text-sm font-bold text-slate-700">Unit tidak ditemukan</p>
-            <p className="text-xs text-slate-500 mt-1">
+          <div className="bento p-8 text-center space-y-1">
+            <p className="font-display text-base font-bold text-fg">Unit tidak ditemukan</p>
+            <p className="text-xs text-muted">
               Silakan gunakan kata kunci lain atau ubah filter kategori.
             </p>
           </div>
@@ -388,7 +395,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 : item.status === 'available'
                 ? item.stock
                 : 0;
-            // P1-5: Hanya status 'available' dengan stok > 0 yang berstatus TERSEDIA
             const isAvailable = item.status === 'available' && effectiveStock > 0;
             const isRented =
               item.status === 'rented' ||
@@ -400,16 +406,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             return (
               <div
                 key={item.id}
-                className={`bg-white rounded-2xl border transition-all overflow-hidden shadow-sm ${
+                className={`bento bento-hover overflow-hidden transition-all ${
                   isQrHighlighted
-                    ? 'border-emerald-500 ring-2 ring-emerald-500/60 shadow-emerald-500/10'
+                    ? 'border-accent ring-2 ring-accent/40'
                     : inCartQty > 0
-                    ? 'border-emerald-500 ring-1 ring-emerald-500'
-                    : 'border-slate-200/90'
+                    ? 'border-accent ring-1 ring-accent'
+                    : 'border-line'
                 }`}
               >
-                <div className="p-3.5 flex gap-3.5">
-                  <div className="w-20 h-24 rounded-xl overflow-hidden shrink-0 relative shadow-inner bg-slate-100 border border-slate-200/80">
+                <div className="p-3.5 sm:p-4 flex gap-3.5">
+                  <div className="w-20 h-24 sm:w-24 sm:h-28 rounded-2xl overflow-hidden shrink-0 relative bg-surface-2 border border-line">
                     {item.imageUrl ? (
                       <>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -418,7 +424,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />
-                        <span className="absolute bottom-1 left-1 right-1 text-[9px] text-white font-bold px-1 py-0.5 bg-black/60 backdrop-blur-xs rounded text-center truncate">
+                        <span className="absolute bottom-1 left-1 right-1 text-[9px] text-white font-bold px-1 py-0.5 bg-black/60 backdrop-blur-xs rounded-md text-center truncate">
                           {item.sku || item.category.split('/')[0]}
                         </span>
                       </>
@@ -427,7 +433,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         className={`w-full h-full bg-linear-to-br ${item.imageBg} flex flex-col items-center justify-center`}
                       >
                         {renderItemIcon(item.iconType, 'w-8 h-8 text-white/95')}
-                        <span className="text-[9px] text-white/90 font-bold mt-1.5 px-1.5 py-0.5 bg-black/25 rounded">
+                        <span className="text-[9px] text-white/90 font-bold mt-1.5 px-1.5 py-0.5 bg-black/25 rounded-md">
                           {item.sku || item.category.split('/')[0]}
                         </span>
                       </div>
@@ -435,46 +441,46 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1 mb-1">
+                    <div className="flex items-center justify-between gap-1 mb-1 flex-wrap">
                       {isAvailable && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span className="chip bg-accent-soft text-accent-text border-accent/30 text-[10px]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                           TERSEDIA ({effectiveStock} unit)
                         </span>
                       )}
                       {isRented && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        <span className="chip bg-danger-soft text-danger-text border-danger/30 text-[10px]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-danger" />
                           SEDANG DISEWA
                         </span>
                       )}
                       {item.status === 'maintenance' && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">
+                        <span className="chip bg-warn-soft text-warn-text border-warn/30 text-[10px]">
                           <Wrench className="w-2.5 h-2.5" />
                           DALAM PERAWATAN
                         </span>
                       )}
                     </div>
 
-                    <h3 className="font-bold text-sm text-slate-900 leading-snug">
+                    <h2 className="font-display font-extrabold text-sm sm:text-base text-fg leading-snug">
                       {item.name}
-                    </h3>
+                    </h2>
 
                     <ul className="mt-1.5 space-y-0.5">
                       {(item.specs || []).map((spec, idx) => (
                         <li
                           key={idx}
-                          className="text-[11px] text-slate-500 flex items-start gap-1.5"
+                          className="text-[11px] text-muted flex items-start gap-1.5"
                         >
-                          <span className="text-emerald-500 font-bold">•</span>
+                          <span className="text-accent-text font-bold">&bull;</span>
                           <span className="truncate">{spec}</span>
                         </li>
                       ))}
                     </ul>
 
                     {isRented && item.availableAt && (
-                      <div className="mt-2 bg-rose-50/80 border border-rose-200 rounded-lg px-2.5 py-1 text-[11px] text-rose-700 font-medium flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 shrink-0 text-rose-500" />
+                      <div className="mt-2 bg-danger-soft border border-danger/30 rounded-xl px-2.5 py-1 text-[11px] text-danger-text font-medium flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 shrink-0 text-danger" />
                         <span>
                           Tersedia kembali: <strong>{item.availableAt}</strong>
                         </span>
@@ -483,18 +489,18 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-slate-50/80 px-3.5 py-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="bg-surface-2/60 px-3.5 sm:px-4 py-2.5 border-t border-line flex items-center justify-between gap-2">
                   <div>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-sm font-extrabold text-slate-900">
+                      <span className="font-display text-base font-extrabold text-fg">
                         {formatRp(calculatedPrice)}
                       </span>
-                      <span className="text-[11px] text-slate-500 font-medium">
+                      <span className="text-[11px] text-muted font-medium">
                         / {durationDays} Hari
                       </span>
                     </div>
                     {durationDays > 1 && (
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[10px] text-subtle">
                         Tarif harian: {formatRp(item.pricePerDay)}/hari
                       </p>
                     )}
@@ -504,25 +510,27 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     inCartQty === 0 ? (
                       <button
                         onClick={() => onUpdateCartQty(item.id, 1, effectiveStock)}
-                        className="bg-slate-900 hover:bg-emerald-600 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition"
+                        className="btn-brutal px-3.5 py-2 text-xs"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Pilih Unit</span>
                       </button>
                     ) : (
-                      <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-300 rounded-xl p-1">
+                      <div className="flex items-center gap-2 bg-surface border border-accent rounded-xl p-1 shadow-xs">
                         <button
                           onClick={() => onUpdateCartQty(item.id, -1, effectiveStock)}
-                          className="w-7 h-7 rounded-lg bg-white text-slate-700 hover:bg-slate-100 flex items-center justify-center shadow-sm"
+                          className="w-7 h-7 rounded-lg bg-surface-2 text-fg hover:bg-surface-3 flex items-center justify-center cursor-pointer transition"
+                          aria-label="Kurangi jumlah"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-xs font-extrabold text-emerald-900 px-1.5">
+                        <span className="font-display text-xs font-extrabold text-accent-text px-1">
                           {inCartQty}
                         </span>
                         <button
                           onClick={() => onUpdateCartQty(item.id, 1, effectiveStock)}
-                          className="w-7 h-7 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center shadow-sm"
+                          className="w-7 h-7 rounded-lg bg-accent text-accent-fg hover:bg-accent-strong flex items-center justify-center cursor-pointer transition font-bold"
+                          aria-label="Tambah jumlah"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
@@ -535,9 +543,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                           `Halo Admin ${shop.name}, saya ingin menanyakan jadwal ketersediaan unit *${item.name}* untuk tanggal lain.`
                         )
                       }
-                      className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition"
+                      className="btn-glass px-3 py-1.5 text-[11px]"
                     >
-                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <MessageCircle className="w-3.5 h-3.5 text-accent-text" />
                       <span>Booking Jadwal Lain</span>
                     </button>
                   )}
@@ -546,19 +554,19 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             );
           })
         )}
-      </div>
+      </main>
 
       {/* REKANAN RENTAL TERPERCAYA */}
       {shop.partnerShop && (
-        <div className="mx-4 mt-5 p-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-3">
+        <aside aria-label="Mitra rekanan" className="mx-4 mt-5 p-4 bento bg-surface flex items-center justify-between gap-3">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1">
+            <span className="chip bg-accent-soft text-accent-text border-accent/30 text-[10px] font-extrabold uppercase">
               <Users className="w-3 h-3" /> Mitra Rekanan Resmi
             </span>
-            <p className="text-xs font-bold text-slate-800 mt-0.5">
+            <p className="font-display text-xs font-bold text-fg mt-1">
               Cari perlengkapan kategori lain?
             </p>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-muted">
               Lihat katalog <strong>{shop.partnerShop.name}</strong>
             </p>
           </div>
@@ -567,57 +575,70 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               const target = shops.find((s) => s.slug === shop.partnerShop?.slug);
               if (target) onSelectShop(target.slug);
             }}
-            className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 transition"
+            className="btn-glass text-xs px-3 py-2 shrink-0"
           >
             <span>Buka Katalog</span>
             <ExternalLink className="w-3 h-3" />
           </button>
-        </div>
+        </aside>
       )}
 
       {/* FOOTER & AKSES INTERNAL */}
-      <div className="mt-10 mb-6 px-4 text-center space-y-3">
-        <div className="border-t border-slate-200 pt-5 flex flex-col items-center gap-2">
+      <footer className="mt-10 mb-6 px-4 text-center space-y-3">
+        <div className="border-t border-line pt-5 flex flex-col items-center gap-2">
           {!isPro ? (
             <>
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                <Image src="/logo.svg" alt="Sebaraja" width={110} height={28} className="h-5 w-auto object-contain" />
-                <span>Powered by SebarAlat</span>
+              <div className="flex items-center gap-2 text-xs font-bold text-fg">
+                <Image
+                  src="/logo.svg"
+                  alt="Sebaraja"
+                  width={110}
+                  height={28}
+                  className="h-5 w-auto object-contain dark:hidden"
+                />
+                <Image
+                  src="/logo-dark.svg"
+                  alt="Sebaraja"
+                  width={110}
+                  height={28}
+                  className="h-5 w-auto object-contain hidden dark:block"
+                />
+                <span className="text-muted">• Powered by SebarAlat</span>
               </div>
-              <p className="text-[11px] text-slate-400">
-                Katalog digital & manajemen stok gratis dari SebarAlat
+              <p className="text-[11px] text-muted">
+                Katalog digital &amp; manajemen stok gratis dari SebarAlat
               </p>
             </>
           ) : (
-            <p className="text-[11px] text-slate-400 font-medium">
-              Katalog Resmi • Layanan Terverifikasi
+            <p className="text-[11px] text-muted font-medium">
+              Katalog Resmi &bull; Layanan Terverifikasi
             </p>
           )}
 
-          <div className="flex items-center justify-center gap-3 mt-2">
+          <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
             {currentRole === 'customer' ? (
               <button
                 onClick={onOpenAuthModal}
-                className="text-[11px] font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
+                className="btn-glass text-[11px] px-2.5 py-1"
               >
-                <Lock className="w-3 h-3" />
+                <Lock className="w-3 h-3 text-accent-text" />
                 <span>Login Staf / Owner</span>
               </button>
             ) : (
               <button
                 onClick={onOpenWorkspace}
-                className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
+                className="btn-glass text-[11px] font-bold text-accent-text px-3 py-1"
               >
-                Buka Panel Kerja ({currentRole.toUpperCase()}) →
+                Buka Panel Kerja ({currentRole.toUpperCase()}) &rarr;
               </button>
             )}
 
             {!isPro && (
               <>
-                <span className="text-slate-300">•</span>
+                <span className="text-subtle">&bull;</span>
                 <button
                   onClick={onNavigateHome}
-                  className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 transition cursor-pointer"
+                  className="text-[11px] font-bold text-accent-text hover:underline transition cursor-pointer"
                 >
                   Daftarkan Usaha Rental Anda
                 </button>
@@ -625,28 +646,28 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             )}
           </div>
         </div>
-      </div>
+      </footer>
 
-      {/* STICKY BOTTOM CHECKOUT BAR */}
+      {/* STICKY BOTTOM CHECKOUT BAR (FLOATING GLASS DOCK + BRUTAL CTA) */}
       {cartSummary.totalUnits > 0 && (
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3.5 shadow-[0_-8px_30px_rgb(0,0,0,0.12)]">
+        <aside aria-label="Ringkasan sewa" className="fixed bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-md sm:max-w-xl z-30 glass-strong rounded-2xl p-3 sm:p-4 shadow-2xl animate-rise border border-line-strong">
           <div className="flex items-center justify-between mb-2.5 px-1">
             <div>
-              <span className="text-xs font-extrabold text-slate-900">
+              <span className="font-display text-xs sm:text-sm font-extrabold text-fg block">
                 {cartSummary.totalUnits} Unit Dipilih ({durationDays} Hari)
               </span>
               <button
                 onClick={onOpenCheckoutModal}
-                className="block text-[11px] text-emerald-600 font-semibold hover:underline"
+                className="text-[11px] text-accent-text font-bold hover:underline cursor-pointer"
               >
-                Lihat rincian pesanan
+                Lihat rincian pesanan &rarr;
               </button>
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-semibold uppercase block">
+              <span className="text-[10px] text-muted font-bold uppercase block">
                 Total Estimasi
               </span>
-              <span className="text-base font-extrabold text-slate-900">
+              <span className="font-display text-base sm:text-lg font-black text-fg">
                 {formatRp(cartSummary.totalCost)}
               </span>
             </div>
@@ -654,14 +675,13 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
           <button
             onClick={onOpenCheckoutModal}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs py-3.5 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition"
+            className="btn-brutal w-full py-3.5 text-xs sm:text-sm"
           >
             <MessageCircle className="w-4 h-4 fill-current" />
             <span>AJUKAN SEWA VIA WHATSAPP</span>
           </button>
-        </div>
+        </aside>
       )}
     </div>
   );
 };
-

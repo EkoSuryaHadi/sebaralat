@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Lock, Mail, KeyRound, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import { Lock, Mail, KeyRound, CheckCircle2, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { Role } from '../types';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
@@ -73,34 +73,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-2xl border border-slate-100">
+    <div className="fixed inset-0 z-50 glass-overlay flex items-center justify-center p-4">
+      <div className="glass-strong animate-rise w-full max-w-sm rounded-bento p-6 space-y-4 text-fg relative overflow-hidden">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 text-emerald-400 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-accent-soft text-accent-text flex items-center justify-center border border-accent/20">
               <Lock className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900">
+              <h3 className="font-display text-sm font-extrabold text-fg tracking-tight">
                 Portal Pengelola Toko
               </h3>
-              <p className="text-[11px] text-slate-500">{shopName}</p>
+              <p className="text-[11px] text-muted">{shopName}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-xs font-bold text-slate-400 hover:text-slate-700"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted hover:text-fg hover:bg-surface-2 transition cursor-pointer"
+            aria-label="Tutup"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 text-[11px] text-emerald-950 leading-relaxed flex items-start gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+        <div className="bg-accent-soft border border-accent/30 rounded-2xl p-3 text-[11px] text-fg-soft leading-relaxed flex items-start gap-2">
+          <ShieldCheck className="w-4 h-4 text-accent-text shrink-0 mt-0.5" />
           <div>
-            <strong>Keamanan Berbasis Akun (Supabase Auth):</strong> Hak akses{' '}
-            <strong>Owner</strong> atau <strong>Staf Gudang</strong> diverifikasi otomatis
+            <strong className="text-fg">Keamanan Berbasis Akun (Supabase Auth):</strong> Hak akses{' '}
+            <strong className="text-fg">Owner</strong> atau <strong className="text-fg">Staf Gudang</strong> diverifikasi otomatis
             di server berdasarkan email terdaftar.
           </div>
         </div>
@@ -108,11 +109,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {step === 'email' ? (
           <form onSubmit={handleRequestOtp} className="space-y-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-fg-soft mb-1">
                 Alamat Email Pengelola (Owner / Staf)
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   required
@@ -120,13 +121,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   placeholder="nama@usaha-rental.com"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900"
+                  className="field pl-9 pr-3 text-xs"
                 />
               </div>
             </div>
 
             {errorMsg && (
-              <p className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+              <p className="text-xs font-semibold text-danger-text bg-danger-soft border border-danger/30 rounded-xl px-3 py-2">
                 {errorMsg}
               </p>
             )}
@@ -134,7 +135,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-slate-900 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl shadow-md transition"
+              className="btn-brutal w-full py-3 text-xs"
             >
               {loading ? 'Mengirim Kode...' : 'Kirim Magic Link / Kode OTP'}
             </button>
@@ -142,18 +143,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-3">
             {infoMsg && (
-              <div className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-[11px] text-accent-text bg-accent-soft border border-accent/30 rounded-xl p-2.5 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-accent-text shrink-0 mt-0.5" />
                 <span>{infoMsg}</span>
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-fg-soft mb-1">
                 Kode OTP Email ({emailInput})
               </label>
               <div className="relative">
-                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <KeyRound className="w-4 h-4 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   required
@@ -161,13 +162,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   placeholder="Masukkan kode OTP"
                   value={otpInput}
                   onChange={(e) => setOtpInput(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 text-center font-mono text-sm font-extrabold tracking-widest border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900"
+                  className="field pl-9 pr-3 text-center font-mono text-sm font-extrabold tracking-widest"
                 />
               </div>
             </div>
 
             {errorMsg && (
-              <p className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+              <p className="text-xs font-semibold text-danger-text bg-danger-soft border border-danger/30 rounded-xl px-3 py-2">
                 {errorMsg}
               </p>
             )}
@@ -179,14 +180,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   setStep('email');
                   setErrorMsg('');
                 }}
-                className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                className="btn-glass px-3 py-2 text-xs"
               >
                 Ganti Email
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition"
+                className="btn-brutal flex-1 py-2.5 text-xs"
               >
                 {loading ? 'Memverifikasi...' : 'Verifikasi & Masuk'}
               </button>
@@ -196,8 +197,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Mode Simulasi Lokal HANYA saat variabel env Supabase belum dikonfigurasi */}
         {!isSupabaseConfigured && onDevSimulateRole && (
-          <div className="pt-3 border-t border-slate-200 space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1">
+          <div className="pt-3 border-t border-line space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-warn-text flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
               Mode Pratinjau Offline (Tanpa Koneksi Supabase)
             </p>
@@ -208,7 +209,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onDevSimulateRole('staff');
                   onClose();
                 }}
-                className="py-2 px-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-[11px] font-bold text-amber-900"
+                className="btn-glass py-2 px-2 text-[11px] font-bold text-warn-text border-warn/30 bg-warn-soft/60"
               >
                 Simulasi Staf Gudang
               </button>
@@ -218,7 +219,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onDevSimulateRole('owner');
                   onClose();
                 }}
-                className="py-2 px-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-[11px] font-bold text-emerald-900"
+                className="btn-glass py-2 px-2 text-[11px] font-bold text-accent-text border-accent/30 bg-accent-soft/60"
               >
                 Simulasi Owner Toko
               </button>
@@ -226,10 +227,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        <div className="pt-2 text-center border-t border-slate-100">
+        <div className="pt-2 text-center border-t border-line">
           <Link
             href="/login"
-            className="text-[11px] font-semibold text-slate-500 hover:text-emerald-600 transition"
+            className="text-[11px] font-semibold text-muted hover:text-accent-text transition"
           >
             Buka Halaman Login Penuh (/login) &rarr;
           </Link>

@@ -36,6 +36,7 @@ import {
   ShopInvite,
 } from '../types';
 import { uploadShopLogo } from '@/lib/imageUtils';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { isProPlanActive, normalizeWhatsapp, STARTER_MAX_ITEMS } from '../lib/validators';
 
 interface WorkspaceViewProps {
@@ -178,12 +179,13 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   };
 
   return (
-    <div className="p-4 space-y-4 pb-16 bg-slate-50 min-h-screen">
+    <div className="min-h-screen bg-bg aurora pb-16">
+     <div className="mx-auto max-w-5xl p-3 sm:p-4 space-y-4">
       {/* Banner Header Workspace Sesuai Role */}
-      <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-md">
+      <div className="glass sticky top-2 z-30 rounded-bento p-3 sm:p-4 animate-rise">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-white/15 bg-slate-800 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-line-strong bg-surface-2 flex items-center justify-center">
               {shop.logoUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -192,18 +194,18 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-linear-to-br from-emerald-500 to-teal-700 flex items-center justify-center">
-                  <Tent className="w-6 h-6 text-white" />
+                <div className="w-full h-full bg-linear-to-br from-accent to-accent-strong flex items-center justify-center">
+                  <Tent className="w-6 h-6 text-accent-fg" />
                 </div>
               )}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span
-                  className={`text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded ${
+                  className={`chip uppercase tracking-wider text-[10px]! font-extrabold ${
                     currentRole === 'owner'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      ? 'bg-accent-soft! text-accent-text! border-accent/30!'
+                      : 'bg-warn-soft! text-warn-text! border-warn/30!'
                   }`}
                 >
                   {currentRole === 'owner'
@@ -211,73 +213,76 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                     : '👷 Mode Operasional Staf Gudang'}
                 </span>
               </div>
-              <h2 className="text-base font-extrabold truncate mt-1">{shop.name}</h2>
-              <p className="text-[11px] text-slate-400 font-mono truncate">
+              <h2 className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-fg truncate mt-1">{shop.name}</h2>
+              <p className="text-[11px] text-muted font-mono truncate">
                 /{shop.slug} • {cloudSynced ? 'Cloud Tersinkronisasi' : 'Penyimpanan Aktif'}
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => onOpenQrModal(null)}
-            className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shrink-0 shadow-sm"
-          >
-            <QrCode className="w-4 h-4" />
-            <span>QR Toko</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <ThemeToggle />
+            <button
+              onClick={() => onOpenQrModal(null)}
+              className="btn-glass px-3 py-2 text-xs shrink-0"
+            >
+              <QrCode className="w-4 h-4 text-accent-text" />
+              <span>QR Toko</span>
+            </button>
+          </div>
         </div>
 
-        {/* Ringkasan Status Inventaris Real-Time */}
-        <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800 text-center">
-          <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl py-2">
-            <span className="text-lg font-extrabold text-emerald-400">{stats.ready}</span>
-            <span className="block text-[10px] text-slate-300 font-medium">🟢 Ready</span>
+        {/* Ringkasan Status Inventaris Real-Time (Bento Tiles) */}
+        <div className="grid grid-cols-3 gap-2.5 mt-3 pt-3 border-t border-line text-center">
+          <div className="bento p-2 sm:p-2.5 border-accent/30 bg-accent-soft/40">
+            <span className="font-display text-lg sm:text-2xl font-extrabold text-accent-text block leading-tight">{stats.ready}</span>
+            <span className="text-[10px] text-muted font-bold block">🟢 Ready</span>
           </div>
-          <div className="bg-rose-500/10 border border-rose-500/25 rounded-xl py-2">
-            <span className="text-lg font-extrabold text-rose-400">{stats.rented}</span>
-            <span className="block text-[10px] text-slate-300 font-medium">🔴 Disewa</span>
+          <div className="bento p-2 sm:p-2.5 border-danger/30 bg-danger-soft/40">
+            <span className="font-display text-lg sm:text-2xl font-extrabold text-danger-text block leading-tight">{stats.rented}</span>
+            <span className="text-[10px] text-muted font-bold block">🔴 Disewa</span>
           </div>
-          <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl py-2">
-            <span className="text-lg font-extrabold text-amber-400">{stats.maintenance}</span>
-            <span className="block text-[10px] text-slate-300 font-medium">🟡 Servis</span>
+          <div className="bento p-2 sm:p-2.5 border-warn/30 bg-warn-soft/40">
+            <span className="font-display text-lg sm:text-2xl font-extrabold text-warn-text block leading-tight">{stats.maintenance}</span>
+            <span className="text-[10px] text-muted font-bold block">🟡 Servis</span>
           </div>
         </div>
 
         {/* Sub-Navigasi Internal */}
-        <div className="grid grid-cols-4 gap-1 bg-slate-800 p-1 rounded-xl mt-3.5">
+        <div className="grid grid-cols-4 gap-1 bg-surface-2/80 border border-line p-1 rounded-2xl mt-3">
           <button
             onClick={() => setWorkspaceTab('inventory')}
-            className={`py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition ${
+            className={`py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
               workspaceTab === 'inventory'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-300 hover:text-white'
+                ? 'bg-surface text-fg shadow-xs border border-line-strong'
+                : 'text-muted hover:text-fg'
             }`}
           >
-            <Sliders className="w-3 h-3" />
+            <Sliders className="w-3 h-3 text-accent-text" />
             <span>Stok</span>
           </button>
 
           <button
             onClick={() => setWorkspaceTab('bookings')}
-            className={`py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition ${
+            className={`py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
               workspaceTab === 'bookings'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-300 hover:text-white'
+                ? 'bg-surface text-fg shadow-xs border border-line-strong'
+                : 'text-muted hover:text-fg'
             }`}
           >
-            <CalendarCheck className="w-3 h-3" />
+            <CalendarCheck className="w-3 h-3 text-accent-text" />
             <span>Booking ({bookings.length})</span>
           </button>
 
           <button
             onClick={() => setWorkspaceTab('logs')}
-            className={`py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition ${
+            className={`py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
               workspaceTab === 'logs'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-300 hover:text-white'
+                ? 'bg-surface text-fg shadow-xs border border-line-strong'
+                : 'text-muted hover:text-fg'
             }`}
           >
-            <History className="w-3 h-3" />
+            <History className="w-3 h-3 text-accent-text" />
             <span>Log ({shopLogs.length})</span>
           </button>
 
@@ -289,15 +294,15 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               }
               setWorkspaceTab('settings');
             }}
-            className={`py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition ${
+            className={`py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition ${
               workspaceTab === 'settings'
-                ? 'bg-white text-slate-900 shadow-sm'
+                ? 'bg-surface text-fg shadow-xs border border-line-strong cursor-pointer'
                 : currentRole !== 'owner'
-                ? 'text-slate-500 cursor-not-allowed'
-                : 'text-slate-300 hover:text-white'
+                ? 'text-subtle cursor-not-allowed opacity-50'
+                : 'text-muted hover:text-fg cursor-pointer'
             }`}
           >
-            <Settings className="w-3 h-3" />
+            <Settings className="w-3 h-3 text-accent-text" />
             <span>Profil</span>
           </button>
         </div>
@@ -308,16 +313,16 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         <div className="space-y-3">
           {/* Info Hak Akses untuk Staf Gudang */}
           {currentRole === 'staff' && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-xs text-amber-900">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="bento p-3 bg-warn-soft/50 border-warn/30 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs text-warn-text">
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>
-                  Anda login sebagai <strong>Staf Gudang</strong>. Anda dapat memperbarui status unit & stok keluar/masuk.
+                  Anda login sebagai <strong>Staf Gudang</strong>. Anda dapat memperbarui status unit &amp; stok keluar/masuk.
                 </span>
               </div>
               <button
                 onClick={onSwitchToOwnerLogin}
-                className="shrink-0 text-[11px] font-bold text-amber-900 underline"
+                className="shrink-0 text-[11px] font-bold text-warn-text underline cursor-pointer"
               >
                 Buka Mode Owner
               </button>
@@ -329,7 +334,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             {currentRole === 'owner' && (
               <button
                 onClick={onOpenAddModal}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
+                className="btn-brutal px-3.5 py-2 text-xs shrink-0"
               >
                 <PackagePlus className="w-4 h-4" />
                 <span>+ Tambah Unit</span>
@@ -337,13 +342,13 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             )}
 
             <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Cari nama unit atau kode SKU..."
                 value={adminSearch}
                 onChange={(e) => setAdminSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="field pl-8 pr-3 py-2 text-xs"
               />
             </div>
           </div>
@@ -352,9 +357,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           <div className="flex items-center justify-between text-xs px-1 py-0.5">
             {!isPro ? (
               <>
-                <span className="text-[11px] font-bold text-slate-500">
+                <span className="text-[11px] font-bold text-muted">
                   Katalog:{' '}
-                  <strong className={allItemsCount >= STARTER_MAX_ITEMS ? 'text-amber-600' : 'text-slate-800'}>
+                  <strong className={allItemsCount >= STARTER_MAX_ITEMS ? 'text-warn-text' : 'text-fg'}>
                     {allItemsCount} / {STARTER_MAX_ITEMS} Unit
                   </strong>{' '}
                   (Starter)
@@ -363,20 +368,20 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   <button
                     type="button"
                     onClick={onOpenUpgradeModal}
-                    className="text-[11px] font-extrabold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] font-extrabold text-accent-text hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <Sparkles className="w-3.5 h-3.5 text-warn-text" />
                     <span>Upgrade Unlimited PRO</span>
                   </button>
                 ) : (
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-subtle">
                     Sisa kuota: {Math.max(0, STARTER_MAX_ITEMS - allItemsCount)} unit
                   </span>
                 )}
               </>
             ) : (
-              <span className="text-[11px] font-extrabold text-emerald-700 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-[11px] font-extrabold text-accent-text flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
                 <span>Katalog: {allItemsCount} Unit (Bisnis PRO Unlimited)</span>
               </span>
             )}
@@ -386,11 +391,11 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           {filteredAdminItems.map((item) => (
             <div
               key={item.id}
-              className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm space-y-3"
+              className="bento p-3.5 sm:p-4 border-line space-y-3"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2.5">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 bg-surface-2 border border-line">
                     {item.imageUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -407,36 +412,36 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                     )}
                   </div>
 
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="chip text-[10px] font-mono font-bold py-0.5">
                         {item.sku || 'UNIT'}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">
+                      <span className="text-[10px] font-bold text-muted uppercase">
                         {item.category}
                       </span>
                     </div>
-                    <h4 className="text-sm font-bold text-slate-900 mt-0.5">{item.name}</h4>
-                    <p className="text-xs font-semibold text-emerald-700">
+                    <h4 className="font-display text-sm font-extrabold text-fg mt-0.5 truncate">{item.name}</h4>
+                    <p className="text-xs font-bold text-accent-text">
                       {formatRp(item.pricePerDay)} / hari
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => onOpenQrModal(item)}
-                    className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200"
+                    className="btn-glass p-2 rounded-xl text-fg-soft"
                     title="Label QR Fisik Unit"
                   >
-                    <QrCode className="w-4 h-4" />
+                    <QrCode className="w-4 h-4 text-accent-text" />
                   </button>
 
                   {/* Hanya Owner yang bisa menghapus unit */}
                   {currentRole === 'owner' && (
                     <button
                       onClick={() => onDeleteUnit(item.id, item.name)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200 transition"
+                      className="p-2 text-danger-text hover:bg-danger-soft rounded-xl border border-danger/30 transition cursor-pointer"
                       title="Hapus Unit (Khusus Owner)"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -446,13 +451,13 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               </div>
 
               {/* 1-TAP STATUS SWITCH */}
-              <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl">
+              <div className="grid grid-cols-3 gap-1.5 bg-surface-2 p-1 rounded-2xl border border-line">
                 <button
                   onClick={() => onStatusChange(item.id, 'available')}
-                  className={`py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition ${
+                  className={`py-2 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
                     item.status === 'available'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-white/60'
+                      ? 'bg-accent text-accent-fg shadow-xs font-extrabold'
+                      : 'text-muted hover:text-fg'
                   }`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -461,10 +466,10 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
                 <button
                   onClick={() => onStatusChange(item.id, 'rented')}
-                  className={`py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition ${
+                  className={`py-2 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
                     item.status === 'rented'
-                      ? 'bg-rose-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-white/60'
+                      ? 'bg-danger text-white shadow-xs font-extrabold'
+                      : 'text-muted hover:text-fg'
                   }`}
                 >
                   <XCircle className="w-3.5 h-3.5" />
@@ -473,10 +478,10 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
                 <button
                   onClick={() => onStatusChange(item.id, 'maintenance')}
-                  className={`py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition ${
+                  className={`py-2 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
                     item.status === 'maintenance'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'text-slate-600 hover:bg-white/60'
+                      ? 'bg-warn text-[#0c110f] shadow-xs font-extrabold'
+                      : 'text-muted hover:text-fg'
                   }`}
                 >
                   <Wrench className="w-3.5 h-3.5" />
@@ -485,23 +490,25 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               </div>
 
               {item.status === 'available' && (
-                <div className="flex items-center justify-between bg-emerald-50/70 border border-emerald-200/80 rounded-xl px-3 py-2">
-                  <span className="text-xs font-semibold text-emerald-950">
+                <div className="flex items-center justify-between bg-accent-soft/40 border border-accent/20 rounded-2xl px-3.5 py-2">
+                  <span className="text-xs font-bold text-accent-text">
                     Stok Fisik Tersedia:
                   </span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onStockChange(item.id, -1)}
-                      className="w-7 h-7 rounded-lg bg-white border border-emerald-300 flex items-center justify-center text-slate-700 font-bold shadow-sm"
+                      className="btn-glass w-7 h-7 rounded-lg text-fg font-bold"
+                      aria-label="Kurangi stok"
                     >
                       -
                     </button>
-                    <span className="text-sm font-extrabold text-emerald-900 w-5 text-center">
+                    <span className="font-display text-sm font-extrabold text-fg w-5 text-center">
                       {item.stock}
                     </span>
                     <button
                       onClick={() => onStockChange(item.id, 1)}
-                      className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shadow-sm"
+                      className="w-7 h-7 rounded-lg bg-accent text-accent-fg hover:bg-accent-strong flex items-center justify-center font-bold shadow-xs cursor-pointer"
+                      aria-label="Tambah stok"
                     >
                       +
                     </button>
@@ -510,9 +517,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               )}
 
               {(item.status === 'rented' || item.status === 'maintenance') && (
-                <div className="bg-rose-50/60 border border-rose-200 rounded-xl p-2.5 space-y-2">
+                <div className="bg-danger-soft/40 border border-danger/30 rounded-2xl p-3 space-y-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-rose-800 uppercase mb-0.5">
+                    <label className="block text-[10px] font-extrabold text-danger-text uppercase mb-1">
                       ⏰ Estimasi Kembali (Tampil ke Pelanggan)
                     </label>
                     <input
@@ -528,12 +535,12 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                         }
                       }}
                       placeholder="Contoh: Minggu, 1 Nov (14:00)"
-                      className="w-full text-xs bg-white border border-rose-200 rounded-lg px-2.5 py-1.5 text-slate-800"
+                      className="field text-xs bg-surface"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">
-                      🔒 Catatan Peminjam (Internal Gudang & Owner)
+                    <label className="block text-[10px] font-extrabold text-muted uppercase mb-1">
+                      🔒 Catatan Peminjam (Internal Gudang &amp; Owner)
                     </label>
                     <input
                       type="text"
@@ -548,13 +555,13 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                         }
                       }}
                       placeholder="Contoh: Disewa Pak Budi - KTP ditahan"
-                      className="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700"
+                      className="field text-xs bg-surface"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+              <div className="flex items-center justify-between text-[10px] text-subtle pt-1 border-t border-line">
                 <span>Diperbarui oleh: {item.lastUpdatedBy || 'Owner'}</span>
                 {currentRole === 'owner' && (
                   <span>Tarif: {formatRp(item.pricePerDay)}/hr</span>
@@ -567,18 +574,18 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
       {/* SUB-TAB BOOKING: DAFTAR PESANAN & JADWAL SEWA */}
       {workspaceTab === 'bookings' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-sm">
-          <div className="border-b border-slate-100 pb-2.5">
-            <h3 className="text-sm font-extrabold text-slate-900">
-              Jadwal Booking & Ketersediaan Tanggal
+        <div className="bento p-4 sm:p-5 border-line space-y-3">
+          <div className="border-b border-line pb-2.5">
+            <h3 className="font-display text-sm font-extrabold text-fg">
+              Jadwal Booking &amp; Ketersediaan Tanggal
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-muted">
               Booking yang berstatus Confirmed atau Picked Up otomatis mengurangi stok pada tanggal terkait.
             </p>
           </div>
 
           {bookings.length === 0 ? (
-            <div className="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200/80">
+            <div className="p-8 text-center text-xs text-muted bento bg-surface-2/60 border-line">
               Belum ada pengajuan booking tercatat untuk toko ini.
             </div>
           ) : (
@@ -586,44 +593,44 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               {bookings.map((bk) => (
                 <div
                   key={bk.id}
-                  className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2"
+                  className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-2.5"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="text-[10px] font-mono font-extrabold bg-slate-900 text-emerald-400 px-2 py-0.5 rounded">
+                      <span className="chip text-[10px] font-mono font-extrabold bg-accent-soft text-accent-text border-accent/30 py-0.5">
                         {bk.code}
                       </span>
-                      <h4 className="text-xs font-extrabold text-slate-900 mt-1">
+                      <h4 className="font-display text-xs font-extrabold text-fg mt-1">
                         {bk.customerName} ({bk.customerPhone})
                       </h4>
-                      <p className="text-[11px] text-slate-600">
+                      <p className="text-[11px] text-muted">
                         📅 {bk.startDate} s/d {bk.endDate} ({bk.durationDays} hari)
                       </p>
                     </div>
-                    <span className="text-xs font-extrabold text-emerald-700">
+                    <span className="font-display text-xs sm:text-sm font-extrabold text-accent-text">
                       {formatRp(bk.totalAmount)}
                     </span>
                   </div>
 
                   {bk.lines && bk.lines.length > 0 && (
-                    <ul className="text-[11px] text-slate-600 bg-white rounded-lg p-2 border border-slate-200/80 space-y-0.5">
+                    <ul className="text-[11px] text-muted bg-surface rounded-xl p-2.5 border border-line space-y-1">
                       {bk.lines.map((ln) => (
                         <li key={ln.id} className="flex justify-between">
                           <span>
                             • {ln.itemName} × {ln.qty}
                           </span>
-                          <span className="font-semibold">{formatRp(ln.subtotal)}</span>
+                          <span className="font-semibold text-fg">{formatRp(ln.subtotal)}</span>
                         </li>
                       ))}
                     </ul>
                   )}
 
                   {bk.notes && (
-                    <p className="text-[11px] text-slate-500 italic">Catatan: {bk.notes}</p>
+                    <p className="text-[11px] text-muted italic">Catatan: {bk.notes}</p>
                   )}
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-[10px] font-bold uppercase text-slate-500">
+                    <span className="text-[10px] font-bold uppercase text-muted">
                       Status Booking:
                     </span>
                     <select
@@ -631,7 +638,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                       onChange={(e) =>
                         onUpdateBookingStatus(bk.id, e.target.value as BookingStatus)
                       }
-                      className="text-xs font-bold bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800"
+                      className="field text-xs font-bold py-1 px-2.5 w-auto"
                     >
                       <option value="pending">⏳ Pending (Menunggu DP)</option>
                       <option value="confirmed">✅ Confirmed (Kunci Stok)</option>
@@ -649,63 +656,61 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
       {/* SUB-TAB 2: LOG RIWAYAT AKTIVITAS (AUDIT TRAIL) */}
       {workspaceTab === 'logs' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-sm">
+        <div className="bento p-4 sm:p-5 border-line space-y-3">
           {!isPro ? (
-            <div className="bg-linear-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 text-center text-white space-y-3 shadow-md">
-              <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+            <div className="bento border-line-strong p-6 text-center text-fg space-y-3 bg-surface-2 aurora">
+              <div className="w-11 h-11 rounded-2xl bg-warn-soft border border-warn/30 text-warn-text flex items-center justify-center mx-auto">
                 <Lock className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                <span className="chip uppercase tracking-wider text-[10px] font-extrabold text-warn-text bg-warn-soft border-warn/30">
                   Fitur Bisnis PRO
                 </span>
-                <h3 className="text-base font-black text-white mt-2">
+                <h3 className="font-display text-base font-extrabold text-fg mt-2">
                   Audit Trail Log Aktivitas Operasional
                 </h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
                   Pantau jam berapa staf gudang mengubah status unit, mencatat nama peminjam, atau mengupdate profil inventaris dengan akurat.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onOpenUpgradeModal}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs px-5 py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition cursor-pointer"
+                className="btn-brutal px-5 py-3 text-xs"
               >
                 Buka Akses Log (Upgrade PRO Mulai Rp 23rb)
               </button>
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    Riwayat Perubahan Status & Stok
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    Memantau aktivitas Staf Gudang & Owner secara transparan
-                  </p>
-                </div>
+              <div className="border-b border-line pb-2.5">
+                <h3 className="font-display text-sm font-extrabold text-fg">
+                  Riwayat Perubahan Status &amp; Stok
+                </h3>
+                <p className="text-[11px] text-muted">
+                  Memantau aktivitas Staf Gudang &amp; Owner secara transparan
+                </p>
               </div>
 
               <div className="space-y-2.5">
                 {shopLogs.map((log) => (
                   <div
                     key={log.id}
-                    className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start justify-between gap-2"
+                    className="p-3 rounded-xl bg-surface-2 border border-line flex items-start justify-between gap-2"
                   >
                     <div className="space-y-0.5">
                       <span
-                        className={`inline-block text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
+                        className={`chip text-[9px] font-extrabold uppercase py-0.5 ${
                           log.actorRole.includes('Owner')
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
+                            ? 'bg-accent-soft text-accent-text border-accent/30'
+                            : 'bg-warn-soft text-warn-text border-warn/30'
                         }`}
                       >
                         {log.actorRole}
                       </span>
-                      <p className="text-xs font-semibold text-slate-800">{log.action}</p>
+                      <p className="text-xs font-semibold text-fg">{log.action}</p>
                     </div>
-                    <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                    <span className="text-[10px] text-subtle whitespace-nowrap">
                       {log.time}
                     </span>
                   </div>
@@ -718,368 +723,365 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
       {/* SUB-TAB 3: PENGATURAN TOKO & UNDANGAN TIM */}
       {workspaceTab === 'settings' && currentRole === 'owner' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 shadow-sm">
-            <div className="border-b border-slate-100 pb-2.5">
-              <h3 className="text-sm font-extrabold text-slate-900">
-                Pengaturan Profil & Akses Anggota Tim
-              </h3>
-              <p className="text-[11px] text-slate-500">
-                Hanya Owner yang dapat mengubah informasi bisnis dan mengundang Staf Gudang via email.
-              </p>
-            </div>
+        <div className="bento p-4 sm:p-5 border-line space-y-4">
+          <div className="border-b border-line pb-2.5">
+            <h3 className="font-display text-sm font-extrabold text-fg">
+              Pengaturan Profil &amp; Akses Anggota Tim
+            </h3>
+            <p className="text-[11px] text-muted">
+              Hanya Owner yang dapat mengubah informasi bisnis dan mengundang Staf Gudang via email.
+            </p>
+          </div>
 
-            {/* Status Paket & Langganan Toko */}
-            <div className="p-4 rounded-2xl bg-linear-to-br from-slate-900 to-slate-950 border border-slate-800 text-white space-y-3 shadow-md">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isPro ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-300'}`}>
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-black">
-                        {isPro ? 'Paket Bisnis PRO' : 'Paket Starter (Gratis)'}
-                      </span>
-                      <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${isPro ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-slate-200'}`}>
-                        {isPro ? 'Aktif' : 'Gratis'}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {isPro
-                        ? `Unlimited stok • Bebas watermark • Staf & Log aktif${shop.billingCycle ? ` (${shop.billingCycle === 'yearly' ? 'Tahunan' : 'Bulanan'})` : ''}`
-                        : `Maksimal 8 unit alat (${allItemsCount}/8 terpakai)`}
-                    </p>
-                  </div>
+          {/* Status Paket & Langganan Toko */}
+          <div className="p-4 rounded-2xl bento bg-surface-2 border border-line space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isPro ? 'bg-accent-soft text-accent-text border border-accent/30' : 'bg-surface-3 text-muted'}`}>
+                  <Sparkles className="w-4 h-4" />
                 </div>
-                <button
-                  type="button"
-                  onClick={onOpenUpgradeModal}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    isPro
-                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-md shadow-emerald-500/20'
-                  }`}
-                >
-                  {isPro ? 'Info Paket PRO' : 'Upgrade ke PRO'}
-                </button>
-              </div>
-            </div>
-
-            {/* Upload Logo Usaha / Brand Toko */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-              <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-slate-800">Logo Usaha / Brand Toko</span>
-                  <p className="text-[10px] text-slate-500">
-                    Akan tampil di header katalog publik, QR toko, dan dashboard
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsUrlMode(!isUrlMode)}
-                  className="text-[10px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
-                >
-                  <Link2 className="w-3 h-3" />
-                  <span>{isUrlMode ? 'Upload File' : 'Gunakan Link URL'}</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-slate-200 bg-white shadow-sm flex items-center justify-center relative">
-                  {shop.logoUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={shop.logoUrl}
-                      alt={shop.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-linear-to-br from-emerald-500 to-teal-700 flex items-center justify-center">
-                      <Tent className="w-7 h-7 text-white" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 space-y-1.5">
-                  {isUrlMode ? (
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="url"
-                        placeholder="https://contoh.com/logo.png"
-                        value={logoUrlInput}
-                        onChange={(e) => setLogoUrlInput(e.target.value)}
-                        className="flex-1 text-xs border border-slate-300 rounded-xl px-2.5 py-1.5 bg-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (logoUrlInput.trim()) {
-                            onSaveShopSettings({ ...shop, logoUrl: logoUrlInput.trim() });
-                            onRecordAuditLog('Memperbarui logo toko via URL');
-                            triggerToast('Logo usaha berhasil diperbarui!');
-                            setIsUrlMode(false);
-                          }
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shrink-0 cursor-pointer"
-                      >
-                        Simpan
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={isUploadingLogo}
-                        onClick={() => logoInputRef.current?.click()}
-                        className="bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-[11px] px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-sm cursor-pointer"
-                      >
-                        {isUploadingLogo ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Mengompres...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>{shop.logoUrl ? 'Ganti Logo' : 'Pilih Logo Usaha'}</span>
-                          </>
-                        )}
-                      </button>
-
-                      {shop.logoUrl && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onSaveShopSettings({ ...shop, logoUrl: '' });
-                            onRecordAuditLog('Menghapus logo toko');
-                            triggerToast('Logo dihapus, kembali ke ikon default.');
-                            setLogoUrlInput('');
-                          }}
-                          className="text-[11px] font-bold text-rose-600 hover:text-rose-700 px-2 py-1.5 hover:bg-rose-50 rounded-lg flex items-center gap-1 cursor-pointer"
-                        >
-                          <X className="w-3 h-3" /> Hapus
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  <p className="text-[10px] text-slate-400">
-                    Format: JPG, PNG, WebP (Otomatis dikompres & proporsional)
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-display text-xs font-extrabold text-fg">
+                      {isPro ? 'Paket Bisnis PRO' : 'Paket Starter (Gratis)'}
+                    </span>
+                    <span className={`chip text-[9px] uppercase font-extrabold py-0.5 ${isPro ? 'bg-accent text-accent-fg' : 'bg-surface-3 text-muted'}`}>
+                      {isPro ? 'Aktif' : 'Gratis'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-muted mt-0.5">
+                    {isPro
+                      ? `Unlimited stok • Bebas watermark • Staf & Log aktif${shop.billingCycle ? ` (${shop.billingCycle === 'yearly' ? 'Tahunan' : 'Bulanan'})` : ''}`
+                      : `Maksimal 8 unit alat (${allItemsCount}/8 terpakai)`}
                   </p>
                 </div>
               </div>
-
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  try {
-                    setIsUploadingLogo(true);
-                    const uploadedLogo = await uploadShopLogo(file, shop.slug);
-                    onSaveShopSettings({ ...shop, logoUrl: uploadedLogo });
-                    onRecordAuditLog('Memperbarui logo toko');
-                    triggerToast('Logo usaha berhasil diunggah!');
-                  } catch (err) {
-                    console.error('Gagal upload logo:', err);
-                    triggerToast('Gagal memproses gambar logo');
-                  } finally {
-                    setIsUploadingLogo(false);
-                    if (logoInputRef.current) logoInputRef.current.value = '';
-                  }
-                }}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama Resmi Usaha Rental
-                </label>
-                <input
-                  type="text"
-                  value={shopDraft.name}
-                  onChange={(e) => setShopDraft({ ...shopDraft, name: e.target.value })}
-                  className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Tagline / Deskripsi Singkat Header
-                </label>
-                <input
-                  type="text"
-                  value={shopDraft.tagline}
-                  onChange={(e) => setShopDraft({ ...shopDraft, tagline: e.target.value })}
-                  className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nomor WhatsApp Admin
-                  </label>
-                  <input
-                    type="text"
-                    value={shopDraft.whatsapp}
-                    onChange={(e) => setShopDraft({ ...shopDraft, whatsapp: e.target.value })}
-                    className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Jam Operasional
-                  </label>
-                  <input
-                    type="text"
-                    value={shopDraft.hours}
-                    onChange={(e) => setShopDraft({ ...shopDraft, hours: e.target.value })}
-                    className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Alamat Lengkap Toko / Gudang
-                </label>
-                <input
-                  type="text"
-                  value={shopDraft.location}
-                  onChange={(e) => setShopDraft({ ...shopDraft, location: e.target.value })}
-                  className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2"
-                />
-              </div>
-
-              {/* Manajemen Anggota & Undangan Email Staf Gudang (Menggantikan PIN Plaintext) */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5">
-                      <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
-                      Undang Staf Gudang / Co-Owner via Email
-                    </span>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      Staf yang diundang cukup login dengan alamat emailnya menggunakan Magic Link / OTP untuk langsung mendapatkan akses operasional gudang.
-                    </p>
-                  </div>
-                  {!isPro && (
-                    <span className="text-[9px] font-extrabold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
-                      Fitur PRO
-                    </span>
-                  )}
-                </div>
-
-                {!isPro ? (
-                  <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-                    <div className="text-xs text-amber-900 flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>Upgrade ke <strong>Bisnis PRO</strong> untuk mendelegasikan kontrol staf gudang via email.</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={onOpenUpgradeModal}
-                      className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow-xs cursor-pointer"
-                    >
-                      Buka Akses Staf
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <div className="relative flex-1">
-                        <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="email"
-                          placeholder="staf.gudang@email.com"
-                          value={inviteEmail}
-                          onChange={(e) => setInviteEmail(e.target.value)}
-                          className="w-full pl-8 pr-2.5 py-2 text-xs bg-white border border-slate-300 rounded-xl"
-                        />
-                      </div>
-                      <select
-                        value={inviteRole}
-                        onChange={(e) => setInviteRole(e.target.value as 'staff' | 'owner')}
-                        className="text-xs font-bold bg-white border border-slate-300 rounded-xl px-2.5 py-2"
-                      >
-                        <option value="staff">Staf Gudang</option>
-                        <option value="owner">Co-Owner</option>
-                      </select>
-                      <button
-                        type="button"
-                        disabled={isInviting || !inviteEmail.trim()}
-                        onClick={async () => {
-                          setIsInviting(true);
-                          try {
-                            await onInviteMember(inviteEmail.trim(), inviteRole);
-                            setInviteEmail('');
-                          } finally {
-                            setIsInviting(false);
-                          }
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2 rounded-xl shrink-0"
-                      >
-                        {isInviting ? 'Mengundang...' : 'Undang'}
-                      </button>
-                    </div>
-
-                    {invites.length > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">
-                          Daftar Undangan Akses ({invites.length})
-                        </span>
-                        {invites.map((inv) => (
-                          <div
-                            key={inv.id}
-                            className="flex items-center justify-between text-[11px] bg-white border border-slate-200 rounded-lg px-2.5 py-1.5"
-                          >
-                            <span className="font-mono text-slate-700 truncate">{inv.email}</span>
-                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                              {inv.role} • {inv.acceptedAt ? 'Aktif' : 'Menunggu Login'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
               <button
-                onClick={() => {
-                  const cleanName = shopDraft.name.trim();
-                  const cleanWa = normalizeWhatsapp(shopDraft.whatsapp);
-                  if (cleanName.length < 2) {
-                    triggerToast('Nama usaha minimal 2 karakter.');
-                    return;
-                  }
-                  if (!/^62[0-9]{8,13}$/.test(cleanWa)) {
-                    triggerToast('Nomor WhatsApp harus valid (contoh: 08123456789).');
-                    return;
-                  }
-                  onSaveShopSettings({
-                    ...shop,
-                    name: cleanName,
-                    tagline: shopDraft.tagline.trim(),
-                    whatsapp: cleanWa,
-                    hours: shopDraft.hours.trim() || shop.hours,
-                    location: shopDraft.location.trim() || shop.location,
-                  });
-                  onRecordAuditLog('Memperbarui pengaturan profil & informasi toko');
-                  triggerToast('Pengaturan toko berhasil disimpan!');
-                }}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl cursor-pointer"
+                type="button"
+                onClick={onOpenUpgradeModal}
+                className={isPro ? 'btn-glass px-3 py-1.5 text-xs' : 'btn-brutal px-3.5 py-2 text-xs'}
               >
-                Simpan Perubahan
+                {isPro ? 'Info Paket PRO' : 'Upgrade ke PRO'}
               </button>
             </div>
           </div>
-        )}
+
+          {/* Upload Logo Usaha / Brand Toko */}
+          <div className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-fg">Logo Usaha / Brand Toko</span>
+                <p className="text-[10px] text-muted">
+                  Akan tampil di header katalog publik, QR toko, dan dashboard
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsUrlMode(!isUrlMode)}
+                className="text-[10px] font-bold text-accent-text hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Link2 className="w-3 h-3" />
+                <span>{isUrlMode ? 'Upload File' : 'Gunakan Link URL'}</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-line bg-surface flex items-center justify-center relative">
+                {shop.logoUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={shop.logoUrl}
+                    alt={shop.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-linear-to-br from-accent to-accent-strong flex items-center justify-center">
+                    <Tent className="w-7 h-7 text-accent-fg" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-1.5">
+                {isUrlMode ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="url"
+                      placeholder="https://contoh.com/logo.png"
+                      value={logoUrlInput}
+                      onChange={(e) => setLogoUrlInput(e.target.value)}
+                      className="field flex-1 text-xs py-1.5"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (logoUrlInput.trim()) {
+                          onSaveShopSettings({ ...shop, logoUrl: logoUrlInput.trim() });
+                          onRecordAuditLog('Memperbarui logo toko via URL');
+                          triggerToast('Logo usaha berhasil diperbarui!');
+                          setIsUrlMode(false);
+                        }
+                      }}
+                      className="btn-brutal px-3 py-1.5 text-[11px] shrink-0"
+                    >
+                      Simpan
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isUploadingLogo}
+                      onClick={() => logoInputRef.current?.click()}
+                      className="btn-glass text-[11px] px-3 py-2 flex items-center gap-1.5"
+                    >
+                      {isUploadingLogo ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-accent-text" />
+                          <span>Mengompres...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3.5 h-3.5 text-accent-text" />
+                          <span>{shop.logoUrl ? 'Ganti Logo' : 'Pilih Logo Usaha'}</span>
+                        </>
+                      )}
+                    </button>
+
+                    {shop.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSaveShopSettings({ ...shop, logoUrl: '' });
+                          onRecordAuditLog('Menghapus logo toko');
+                          triggerToast('Logo dihapus, kembali ke ikon default.');
+                          setLogoUrlInput('');
+                        }}
+                        className="text-[11px] font-bold text-danger-text hover:underline px-2 py-1.5 flex items-center gap-1 cursor-pointer"
+                      >
+                        <X className="w-3 h-3" /> Hapus
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-[10px] text-subtle">
+                  Format: JPG, PNG, WebP (Otomatis dikompres &amp; proporsional)
+                </p>
+              </div>
+            </div>
+
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  setIsUploadingLogo(true);
+                  const uploadedLogo = await uploadShopLogo(file, shop.slug);
+                  onSaveShopSettings({ ...shop, logoUrl: uploadedLogo });
+                  onRecordAuditLog('Memperbarui logo toko');
+                  triggerToast('Logo usaha berhasil diunggah!');
+                } catch (err) {
+                  console.error('Gagal upload logo:', err);
+                  triggerToast('Gagal memproses gambar logo');
+                } finally {
+                  setIsUploadingLogo(false);
+                  if (logoInputRef.current) logoInputRef.current.value = '';
+                }
+              }}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-fg-soft mb-1">
+                Nama Resmi Usaha Rental
+              </label>
+              <input
+                type="text"
+                value={shopDraft.name}
+                onChange={(e) => setShopDraft({ ...shopDraft, name: e.target.value })}
+                className="field text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-fg-soft mb-1">
+                Tagline / Deskripsi Singkat Header
+              </label>
+              <input
+                type="text"
+                value={shopDraft.tagline}
+                onChange={(e) => setShopDraft({ ...shopDraft, tagline: e.target.value })}
+                className="field text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-xs font-bold text-fg-soft mb-1">
+                  Nomor WhatsApp Admin
+                </label>
+                <input
+                  type="text"
+                  value={shopDraft.whatsapp}
+                  onChange={(e) => setShopDraft({ ...shopDraft, whatsapp: e.target.value })}
+                  className="field text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-fg-soft mb-1">
+                  Jam Operasional
+                </label>
+                <input
+                  type="text"
+                  value={shopDraft.hours}
+                  onChange={(e) => setShopDraft({ ...shopDraft, hours: e.target.value })}
+                  className="field text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-fg-soft mb-1">
+                Alamat Lengkap Toko / Gudang
+              </label>
+              <input
+                type="text"
+                value={shopDraft.location}
+                onChange={(e) => setShopDraft({ ...shopDraft, location: e.target.value })}
+                className="field text-xs"
+              />
+            </div>
+
+            {/* Manajemen Anggota & Undangan Email Staf Gudang */}
+            <div className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-extrabold text-fg flex items-center gap-1.5">
+                    <UserPlus className="w-3.5 h-3.5 text-accent-text" />
+                    Undang Staf Gudang / Co-Owner via Email
+                  </span>
+                  <p className="text-[10px] text-muted mt-0.5">
+                    Staf yang diundang cukup login dengan alamat emailnya menggunakan Magic Link / OTP untuk langsung mendapatkan akses operasional gudang.
+                  </p>
+                </div>
+                {!isPro && (
+                  <span className="chip uppercase text-[9px] font-extrabold text-warn-text bg-warn-soft border-warn/30">
+                    Fitur PRO
+                  </span>
+                )}
+              </div>
+
+              {!isPro ? (
+                <div className="bg-warn-soft/50 border border-warn/30 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+                  <div className="text-xs text-warn-text flex items-center gap-2">
+                    <Lock className="w-4 h-4 shrink-0" />
+                    <span>Upgrade ke <strong>Bisnis PRO</strong> untuk mendelegasikan kontrol staf gudang via email.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onOpenUpgradeModal}
+                    className="btn-brutal text-[11px] px-3 py-1.5 shrink-0"
+                  >
+                    Buka Akses Staf
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                      <Mail className="w-3.5 h-3.5 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="email"
+                        placeholder="staf.gudang@email.com"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        className="field pl-8 text-xs py-2"
+                      />
+                    </div>
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value as 'staff' | 'owner')}
+                      className="field text-xs font-bold py-2 w-auto"
+                    >
+                      <option value="staff">Staf Gudang</option>
+                      <option value="owner">Co-Owner</option>
+                    </select>
+                    <button
+                      type="button"
+                      disabled={isInviting || !inviteEmail.trim()}
+                      onClick={async () => {
+                        setIsInviting(true);
+                        try {
+                          await onInviteMember(inviteEmail.trim(), inviteRole);
+                          setInviteEmail('');
+                        } finally {
+                          setIsInviting(false);
+                        }
+                      }}
+                      className="btn-brutal text-xs px-3.5 py-2 shrink-0"
+                    >
+                      {isInviting ? 'Mengundang...' : 'Undang'}
+                    </button>
+                  </div>
+
+                  {invites.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-bold uppercase text-subtle">
+                        Daftar Undangan Akses ({invites.length})
+                      </span>
+                      {invites.map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="flex items-center justify-between text-[11px] bg-surface border border-line rounded-xl px-2.5 py-1.5"
+                        >
+                          <span className="font-mono text-fg-soft truncate">{inv.email}</span>
+                          <span className="chip text-[10px] font-bold uppercase">
+                            {inv.role} • {inv.acceptedAt ? 'Aktif' : 'Menunggu Login'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                const cleanName = shopDraft.name.trim();
+                const cleanWa = normalizeWhatsapp(shopDraft.whatsapp);
+                if (cleanName.length < 2) {
+                  triggerToast('Nama usaha minimal 2 karakter.');
+                  return;
+                }
+                if (!/^62[0-9]{8,13}$/.test(cleanWa)) {
+                  triggerToast('Nomor WhatsApp harus valid (contoh: 08123456789).');
+                  return;
+                }
+                onSaveShopSettings({
+                  ...shop,
+                  name: cleanName,
+                  tagline: shopDraft.tagline.trim(),
+                  whatsapp: cleanWa,
+                  hours: shopDraft.hours.trim() || shop.hours,
+                  location: shopDraft.location.trim() || shop.location,
+                });
+                onRecordAuditLog('Memperbarui pengaturan profil & informasi toko');
+                triggerToast('Pengaturan toko berhasil disimpan!');
+              }}
+              className="btn-brutal w-full py-3 text-xs"
+            >
+              Simpan Perubahan
+            </button>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 };
