@@ -91,6 +91,10 @@ BEGIN
     RAISE EXCEPTION 'Durasi sewa harus antara 1 hingga 60 hari.';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM public.shops WHERE slug = p_shop_slug) THEN
+    RAISE EXCEPTION 'Toko "%" belum terdaftar di database.', p_shop_slug;
+  END IF;
+
   IF (jsonb_typeof(p_lines) <> 'array' OR jsonb_array_length(p_lines) = 0)
      AND (p_bundles IS NULL OR jsonb_typeof(p_bundles) <> 'array' OR jsonb_array_length(p_bundles) = 0) THEN
     RAISE EXCEPTION 'Keranjang sewa tidak boleh kosong.';
@@ -283,6 +287,10 @@ BEGIN
 
   IF p_duration_days < 1 OR p_duration_days > 60 THEN
     RAISE EXCEPTION 'Durasi sewa harus antara 1 hingga 60 hari.';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.shops WHERE slug = p_shop_slug) THEN
+    RAISE EXCEPTION 'Toko "%" belum terdaftar di database.', p_shop_slug;
   END IF;
 
   IF jsonb_typeof(p_lines) <> 'array' OR jsonb_array_length(p_lines) = 0 THEN
