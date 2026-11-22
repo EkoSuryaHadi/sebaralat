@@ -251,20 +251,28 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     );
   }, [items, adminSearch]);
 
-  const selectableCategories = useMemo(() => {
-    const defaultList = ['Camping', 'Alat Teknik/Proyek', 'Kamera & Audio'];
+  const itemCategories = useMemo(() => {
     const fromItems = items
       .map((item) => item.category?.trim())
       .filter(
         (cat): cat is string =>
           Boolean(cat) && cat !== 'Semua' && cat !== '🟢 Ready Saja'
       );
-    return Array.from(new Set([...defaultList, ...fromItems]));
+    return Array.from(new Set(fromItems));
   }, [items]);
 
+  const selectableCategories = useMemo(() => {
+    const defaultList = ['Camping', 'Alat Teknik/Proyek', 'Kamera & Audio'];
+    return itemCategories.length > 0 ? itemCategories : defaultList;
+  }, [itemCategories]);
+
   const catalogCategories = useMemo(() => {
-    return ['Semua', '🟢 Ready Saja', ...selectableCategories];
-  }, [selectableCategories]);
+    return ['Semua', '🟢 Ready Saja', ...itemCategories];
+  }, [itemCategories]);
+
+  const effectiveSelectedCategory = catalogCategories.includes(selectedCategory)
+    ? selectedCategory
+    : 'Semua';
 
   const stats = useMemo(() => {
     return {
@@ -472,7 +480,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     setNewItemForm({
       name: '',
       sku: '',
-      category: 'Camping',
+      category: selectableCategories[0] || 'Umum',
       pricePerDay: '',
       stock: 1,
       spec1: '',
@@ -850,7 +858,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               availabilityMap={availabilityMap}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              selectedCategory={selectedCategory}
+              selectedCategory={effectiveSelectedCategory}
               setSelectedCategory={setSelectedCategory}
               categories={catalogCategories}
               cart={cart}
