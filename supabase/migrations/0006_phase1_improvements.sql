@@ -10,7 +10,8 @@ ADD COLUMN IF NOT EXISTS discount_tiers JSONB NOT NULL DEFAULT '[{"minDays": 3, 
 COMMENT ON COLUMN public.shops.discount_tiers IS 'Daftar tier diskon durasi milik toko: [{"minDays": 3, "discountPercent": 10}]. Kosong [] berarti tanpa diskon durasi.';
 
 -- Perbarui view publik shops_public agar menyertakan discount_tiers, pro_expires_at, billing_cycle
-CREATE OR REPLACE VIEW public.shops_public AS
+DROP VIEW IF EXISTS public.shops_public;
+CREATE VIEW public.shops_public AS
 SELECT
   slug,
   name,
@@ -22,13 +23,13 @@ SELECT
   whatsapp,
   is_verified,
   plan,
-  pro_expires_at,
-  billing_cycle,
   terms,
-  discount_tiers,
   partner_shop,
   logo_url,
-  created_at
+  created_at,
+  pro_expires_at,
+  billing_cycle,
+  discount_tiers
 FROM public.shops;
 
 -- 2. Fungsi multiplier durasi berbasis konfigurasi discount_tiers milik toko
