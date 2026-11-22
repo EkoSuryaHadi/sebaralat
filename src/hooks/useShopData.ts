@@ -11,11 +11,13 @@ import {
   mapLogFromDb,
   mapBookingFromDb,
   mapInviteFromDb,
+  mapMemberFromDb,
   ShopDbRow,
   RentalItemDbRow,
   ActivityLogDbRow,
   BookingDbRow,
   ShopInviteDbRow,
+  ShopMemberDbRow,
 } from '@/lib/supabase';
 import {
   Shop,
@@ -24,15 +26,18 @@ import {
   Booking,
   BookingStatus,
   ShopInvite,
+  ShopMember,
   Role,
   ItemStatus,
 } from '@/types';
-import { DEFAULT_SHOPS, DEFAULT_ITEMS } from '@/data/mockData';
+import { DEFAULT_SHOPS, DEFAULT_ITEMS, DEFAULT_BOOKINGS } from '@/data/mockData';
 import { triggerTelegramClientAlert } from '@/lib/telegram';
 import {
+  DEFAULT_DISCOUNT_TIERS,
   addDaysToIsoDate,
   computeShopAvailabilityMap,
   getDurationMultiplier,
+  maskCustomerPhone,
   sanitizeItemForRole,
 } from '@/lib/validators';
 
@@ -64,8 +69,17 @@ export function useShopData(params: {
       time: 'Kemarin, 19:40 WITA',
     },
   ]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>(DEFAULT_BOOKINGS);
   const [invites, setInvites] = useState<ShopInvite[]>([]);
+  const [members, setMembers] = useState<ShopMember[]>([
+    {
+      shopSlug: 'borneo-rental',
+      userId: 'demo-staff-1',
+      email: 'gudang.borneo@sebaraja.com',
+      role: 'staff',
+      createdAt: '2026-11-01T08:00:00Z',
+    },
+  ]);
   const [cloudAvailabilityMap, setCloudAvailabilityMap] = useState<Record<string, number> | null>(null);
 
   // 1. Fetch daftar toko & item toko aktif
@@ -78,7 +92,7 @@ export function useShopData(params: {
         client
           .from('shops')
           .select(
-            'slug, name, tagline, category_type, location, maps_url, hours, whatsapp, is_verified, plan, pro_expires_at, billing_cycle, terms, partner_shop, logo_url'
+            'slug, name, tagline, category_type, location, maps_url, hours, whatsapp, is_verified, plan, pro_expires_at, billing_cycle, terms, discount_tiers, partner_shop, logo_url'
           )
           .limit(50),
         client
@@ -180,10 +194,10 @@ export function useShopData(params: {
     };
   }, [activeShopSlug]);
 
-  // 2. Fetch data internal (log, booking, undangan, serta kolom internal renter_note) hanya bila user punya role pengelola
+  // 2. Fetch data internal (log, booking, undangan, anggota tim, serta kolom internal renter_note) hanya bila user punya role pengelola
   const fetchWorkspaceData = useCallback(async () => {
     if (!supabase || currentRole === 'customer') return;
-    const [logsRes, bookingsRes, invitesRes, internalItemsRes] = await Promise.all([
+    const [logsRes, bookingsRes, invitesRes, membersRes, internalItemsRes] = await Promise.all([
       supabase
         .from('activity_logs')
         .select('id, shop_slug, actor_role, action, created_at')
@@ -205,6 +219,13 @@ export function useShopData(params: {
             .eq('shop_slug', activeShopSlug)
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: null, error: null }),
+      currentRole === 'owner'
+        ? supabase
+            .from('shop_members')
+            .select('shop_slug, user_id, email, role, created_at')
+            .eq('shop_slug', activeShopSlug)
+            .order('created_at', { ascending: true })
+        : Promise.resolve({ data: null, error: null }),
       supabase
         .from('rental_items')
         .select('id, renter_note, last_updated_by')
@@ -216,10 +237,19 @@ export function useShopData(params: {
       setActivityLogs((logsRes.data as ActivityLogDbRow[]).map(mapLogFromDb));
     }
     if (!bookingsRes.error && bookingsRes.data) {
-      setBookings((bookingsRes.data as BookingDbRow[]).map(mapBookingFromDb));
+      const fetchedBookings = (bookingsRes.data as BookingDbRow[]).map(mapBookingFromDb);
+      const isDemoShop = DEFAULT_SHOPS.some((ds) => ds.slug === activeShopSlug);
+      const fallbackBookings =
+        isDemoShop && fetchedBookings.length === 0
+          ? DEFAULT_BOOKINGS.filter((b) => b.shopSlug === activeShopSlug)
+          : [];
+      setBookings(fetchedBookings.length > 0 ? fetchedBookings : fallbackBookings);
     }
     if (!invitesRes.error && invitesRes.data) {
       setInvites((invitesRes.data as ShopInviteDbRow[]).map(mapInviteFromDb));
+    }
+    if (!membersRes.error && membersRes.data) {
+      setMembers((membersRes.data as ShopMemberDbRow[]).map(mapMemberFromDb));
     }
     if (!internalItemsRes.error && internalItemsRes.data) {
       const notesMap = new Map(
@@ -475,6 +505,7 @@ export function useShopData(params: {
           'Wajib meninggalkan kartu identitas asli (E-KTP) saat pengambilan unit.',
           'Pembayaran lunas saat serah terima alat.',
         ],
+        discountTiers: DEFAULT_DISCOUNT_TIERS,
       };
       const starterItem: RentalItem = {
         id:
@@ -589,7 +620,7 @@ export function useShopData(params: {
       return localBooking;
     }
 
-    const safeMultiplier = getDurationMultiplier(durationDays);
+    const safeMultiplier = getDurationMultiplier(durationDays, shop?.discountTiers);
     const linesPayload = params.selectedList.map((it) => ({
       item_id: it.id,
       qty: it.qty,
@@ -681,6 +712,100 @@ export function useShopData(params: {
     triggerToast(`Undangan ${role.toUpperCase()} untuk ${email} berhasil dibuat!`);
   };
 
+  const removeShopMember = async (userId: string, email: string) => {
+    if (currentRole !== 'owner') {
+      triggerToast('Hanya Owner yang dapat mencabut akses anggota.');
+      return;
+    }
+
+    const prevMembers = members;
+    setMembers((prev) =>
+      prev.filter((m) => !(m.shopSlug === activeShopSlug && m.userId === userId))
+    );
+
+    if (!supabase) {
+      appendLocalAuditLog(`Mencabut akses staf gudang: ${email}`);
+      triggerToast(`Akses ${email} berhasil dicabut.`);
+      return;
+    }
+
+    const { error } = await supabase
+      .from('shop_members')
+      .delete()
+      .eq('shop_slug', activeShopSlug)
+      .eq('user_id', userId);
+
+    if (error) {
+      setMembers(prevMembers);
+      triggerToast(`Gagal mencabut akses: ${error.message}`);
+      return;
+    }
+    triggerToast(`Akses ${email} berhasil dicabut.`);
+  };
+
+  const revokeShopInvite = async (inviteId: string, email: string) => {
+    if (currentRole !== 'owner') {
+      triggerToast('Hanya Owner yang dapat membatalkan undangan.');
+      return;
+    }
+
+    const prevInvites = invites;
+    setInvites((prev) => prev.filter((inv) => inv.id !== inviteId));
+
+    if (!supabase) {
+      appendLocalAuditLog(`Membatalkan undangan akses untuk ${email}`);
+      triggerToast(`Undangan untuk ${email} dibatalkan.`);
+      return;
+    }
+
+    const { error } = await supabase
+      .from('shop_invites')
+      .delete()
+      .eq('id', inviteId)
+      .eq('shop_slug', activeShopSlug);
+
+    if (error) {
+      setInvites(prevInvites);
+      triggerToast(`Gagal membatalkan undangan: ${error.message}`);
+      return;
+    }
+    triggerToast(`Undangan untuk ${email} dibatalkan.`);
+  };
+
+  const lookupBookingByCode = useCallback(
+    async (rawCode: string): Promise<Booking | null> => {
+      const cleanCode = (rawCode || '').trim().toUpperCase();
+      if (!cleanCode) return null;
+
+      // 1. Cek pada state lokal terlebih dahulu (mendukung demo mode & booking yang baru dibuat)
+      const localFound = bookings.find(
+        (b) => b.shopSlug === activeShopSlug && b.code.toUpperCase() === cleanCode
+      );
+      if (localFound) {
+        return currentRole === 'customer'
+          ? { ...localFound, customerPhone: maskCustomerPhone(localFound.customerPhone) }
+          : localFound;
+      }
+
+      // 2. Jika terhubung ke Supabase, panggil RPC aman get_public_booking_by_code
+      if (supabase) {
+        const { data, error } = await supabase.rpc('get_public_booking_by_code', {
+          p_shop_slug: activeShopSlug,
+          p_booking_code: cleanCode,
+        });
+        if (!error && data) {
+          const mapped = mapBookingFromDb(data as BookingDbRow);
+          return currentRole === 'customer'
+            ? { ...mapped, customerPhone: maskCustomerPhone(mapped.customerPhone) }
+            : mapped;
+        }
+      }
+
+      return null;
+    },
+    [bookings, activeShopSlug, currentRole]
+  );
+
   const updateShopPlanLocally = (
     slug: string,
     plan: 'FREE' | 'PRO',
@@ -702,8 +827,9 @@ export function useShopData(params: {
     shop,
     items,
     shopLogs,
-    bookings,
+    bookings: bookings.filter((b) => b.shopSlug === activeShopSlug),
     invites,
+    members: members.filter((m) => m.shopSlug === activeShopSlug),
     availabilityMap,
     saveItemToCloud,
     deleteItemFromCloud,
@@ -713,7 +839,10 @@ export function useShopData(params: {
     createShopAtomically,
     createBookingOrder,
     updateBookingStatus,
+    lookupBookingByCode,
     inviteShopMember,
+    removeShopMember,
+    revokeShopInvite,
     appendLocalAuditLog,
   };
 }

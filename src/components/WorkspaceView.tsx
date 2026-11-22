@@ -23,6 +23,16 @@ import {
   Mail,
   Sparkles,
   Lock,
+  Pencil,
+  MessageCircle,
+  Plus,
+  Percent,
+  MapPin,
+  FileText,
+  TrendingUp,
+  Download,
+  Printer,
+  Award,
 } from 'lucide-react';
 import {
   Shop,
@@ -34,10 +44,21 @@ import {
   Booking,
   BookingStatus,
   ShopInvite,
+  ShopMember,
+  DiscountTier,
 } from '../types';
 import { uploadShopLogo } from '@/lib/imageUtils';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { isProPlanActive, normalizeWhatsapp, STARTER_MAX_ITEMS } from '../lib/validators';
+import {
+  isProPlanActive,
+  normalizeWhatsapp,
+  STARTER_MAX_ITEMS,
+  buildBookingFollowUpWaMessage,
+  normalizeDiscountTiers,
+  DEFAULT_DISCOUNT_TIERS,
+  computeShopAnalytics,
+  buildBookingsCsv,
+} from '../lib/validators';
 
 interface WorkspaceViewProps {
   shop: Shop;
@@ -53,13 +74,18 @@ interface WorkspaceViewProps {
   shopLogs: ActivityLog[];
   bookings: Booking[];
   invites: ShopInvite[];
+  members?: ShopMember[];
   onUpdateBookingStatus: (bookingId: string, newStatus: BookingStatus) => Promise<void>;
   onInviteMember: (email: string, role: 'owner' | 'staff') => Promise<void>;
+  onRemoveMember?: (userId: string, email: string) => Promise<void>;
+  onRevokeInvite?: (inviteId: string, email: string) => Promise<void>;
   adminSearch: string;
   setAdminSearch: (val: string) => void;
   filteredAdminItems: RentalItem[];
   onOpenAddModal: () => void;
+  onOpenEditModal?: (item: RentalItem) => void;
   onOpenQrModal: (item: RentalItem | null) => void;
+  onOpenBookingReceipt?: (booking: Booking) => void;
   onDeleteUnit: (itemId: string, itemName: string) => void;
   onStatusChange: (itemId: string, newStatus: ItemStatus) => void;
   onStockChange: (itemId: string, delta: number) => void;
@@ -83,13 +109,18 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   shopLogs,
   bookings,
   invites,
+  members = [],
   onUpdateBookingStatus,
   onInviteMember,
+  onRemoveMember,
+  onRevokeInvite,
   adminSearch,
   setAdminSearch,
   filteredAdminItems,
   onOpenAddModal,
+  onOpenEditModal,
   onOpenQrModal,
+  onOpenBookingReceipt,
   onDeleteUnit,
   onStatusChange,
   onStockChange,
@@ -109,7 +140,28 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'staff' | 'owner'>('staff');
   const [isInviting, setIsInviting] = useState(false);
+  const [newTierDays, setNewTierDays] = useState('3');
+  const [newTierPercent, setNewTierPercent] = useState('10');
+  const [newTermInput, setNewTermInput] = useState('');
+  const [analyticsPeriodDays, setAnalyticsPeriodDays] = useState<number | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const analyticsSummary = computeShopAnalytics(bookings, analyticsPeriodDays);
+
+  const handleDownloadCsv = () => {
+    const csvContent = buildBookingsCsv(bookings);
+    if (typeof window === 'undefined') return;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `laporan-booking-${shop.slug}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    triggerToast('Laporan CSV berhasil diunduh!');
+  };
 
   // P1-1: Draft lokal untuk pengaturan profil toko (di-key berdasarkan slug) agar tidak menembakkan query DB di setiap ketikan huruf dan bebas cascading render
   const [shopEditsBySlug, setShopEditsBySlug] = useState<
@@ -121,6 +173,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         whatsapp: string;
         hours: string;
         location: string;
+        mapsUrl: string;
+        terms: string[];
+        discountTiers: DiscountTier[];
       }>
     >
   >({});
@@ -132,6 +187,11 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     whatsapp: currentShopEdit.whatsapp ?? shop.whatsapp,
     hours: currentShopEdit.hours ?? shop.hours,
     location: currentShopEdit.location ?? shop.location,
+    mapsUrl: currentShopEdit.mapsUrl ?? (shop.mapsUrl || ''),
+    terms: currentShopEdit.terms ?? (shop.terms || []),
+    discountTiers:
+      currentShopEdit.discountTiers ??
+      (shop.discountTiers ?? DEFAULT_DISCOUNT_TIERS),
   };
 
   const setShopDraft = (nextDraft: typeof shopDraft) => {
@@ -181,8 +241,8 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   return (
     <div className="min-h-screen bg-bg aurora pb-16">
      <div className="mx-auto max-w-5xl p-3 sm:p-4 space-y-4">
-      {/* Banner Header Workspace Sesuai Role */}
-      <div className="glass sticky top-2 z-30 rounded-bento p-3 sm:p-4 animate-rise">
+      {/* Header Workspace (Non-Sticky agar layar lega & tidak bertumpuk) */}
+      <div className="bento bg-surface border-line p-3 sm:p-4 animate-rise">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-line-strong bg-surface-2 flex items-center justify-center">
@@ -247,66 +307,89 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             <span className="text-[10px] text-muted font-bold block">🟡 Servis</span>
           </div>
         </div>
-
-        {/* Sub-Navigasi Internal */}
-        <div className="grid grid-cols-4 gap-1 bg-surface-2/80 border border-line p-1 rounded-2xl mt-3">
-          <button
-            onClick={() => setWorkspaceTab('inventory')}
-            className={`py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
-              workspaceTab === 'inventory'
-                ? 'bg-surface text-fg shadow-xs border border-line-strong'
-                : 'text-muted hover:text-fg'
-            }`}
-          >
-            <Sliders className="w-3 h-3 text-accent-text" />
-            <span>Stok</span>
-          </button>
-
-          <button
-            onClick={() => setWorkspaceTab('bookings')}
-            className={`py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
-              workspaceTab === 'bookings'
-                ? 'bg-surface text-fg shadow-xs border border-line-strong'
-                : 'text-muted hover:text-fg'
-            }`}
-          >
-            <CalendarCheck className="w-3 h-3 text-accent-text" />
-            <span>Booking ({bookings.length})</span>
-          </button>
-
-          <button
-            onClick={() => setWorkspaceTab('logs')}
-            className={`py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
-              workspaceTab === 'logs'
-                ? 'bg-surface text-fg shadow-xs border border-line-strong'
-                : 'text-muted hover:text-fg'
-            }`}
-          >
-            <History className="w-3 h-3 text-accent-text" />
-            <span>Log ({shopLogs.length})</span>
-          </button>
-
-          <button
-            onClick={() => {
-              if (currentRole !== 'owner') {
-                triggerToast('Terbatas: Pengaturan Toko hanya untuk Owner.');
-                return;
-              }
-              setWorkspaceTab('settings');
-            }}
-            className={`py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition ${
-              workspaceTab === 'settings'
-                ? 'bg-surface text-fg shadow-xs border border-line-strong cursor-pointer'
-                : currentRole !== 'owner'
-                ? 'text-subtle cursor-not-allowed opacity-50'
-                : 'text-muted hover:text-fg cursor-pointer'
-            }`}
-          >
-            <Settings className="w-3 h-3 text-accent-text" />
-            <span>Profil</span>
-          </button>
-        </div>
       </div>
+
+      {/* Sub-Navigasi Internal Sticky (5 Tab: Stok, Booking, Omzet, Log, Profil) */}
+      <nav
+        aria-label="Navigasi Workspace"
+        className="sticky top-12 z-30 bg-surface/95 backdrop-blur-md border border-line-strong shadow-sm grid grid-cols-5 gap-1 p-1 rounded-2xl"
+      >
+        <button
+          onClick={() => setWorkspaceTab('inventory')}
+          className={`py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+            workspaceTab === 'inventory'
+              ? 'bg-accent text-accent-fg shadow-xs font-extrabold'
+              : 'text-muted hover:text-fg hover:bg-surface-2'
+          }`}
+        >
+          <Sliders className="w-3.5 h-3.5" />
+          <span>Stok</span>
+        </button>
+
+        <button
+          onClick={() => setWorkspaceTab('bookings')}
+          className={`py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+            workspaceTab === 'bookings'
+              ? 'bg-accent text-accent-fg shadow-xs font-extrabold'
+              : 'text-muted hover:text-fg hover:bg-surface-2'
+          }`}
+        >
+          <CalendarCheck className="w-3.5 h-3.5" />
+          <span>Booking ({bookings.length})</span>
+        </button>
+
+        <button
+          onClick={() => {
+            if (currentRole !== 'owner') {
+              triggerToast('Terbatas: Laporan Omzet hanya untuk Owner.');
+              return;
+            }
+            setWorkspaceTab('analytics');
+          }}
+          className={`py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition ${
+            workspaceTab === 'analytics'
+              ? 'bg-accent text-accent-fg shadow-xs font-extrabold cursor-pointer'
+              : currentRole !== 'owner'
+              ? 'text-subtle cursor-not-allowed opacity-50'
+              : 'text-muted hover:text-fg hover:bg-surface-2 cursor-pointer'
+          }`}
+        >
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>Omzet</span>
+        </button>
+
+        <button
+          onClick={() => setWorkspaceTab('logs')}
+          className={`py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+            workspaceTab === 'logs'
+              ? 'bg-accent text-accent-fg shadow-xs font-extrabold'
+              : 'text-muted hover:text-fg hover:bg-surface-2'
+          }`}
+        >
+          <History className="w-3.5 h-3.5" />
+          <span>Log ({shopLogs.length})</span>
+        </button>
+
+        <button
+          onClick={() => {
+            if (currentRole !== 'owner') {
+              triggerToast('Terbatas: Pengaturan Toko hanya untuk Owner.');
+              return;
+            }
+            setWorkspaceTab('settings');
+          }}
+          className={`py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition ${
+            workspaceTab === 'settings'
+              ? 'bg-accent text-accent-fg shadow-xs font-extrabold cursor-pointer'
+              : currentRole !== 'owner'
+              ? 'text-subtle cursor-not-allowed opacity-50'
+              : 'text-muted hover:text-fg hover:bg-surface-2 cursor-pointer'
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>Profil</span>
+        </button>
+      </nav>
 
       {/* SUB-TAB 1: KONTROL INVENTARIS & STATUS 1-TAP */}
       {workspaceTab === 'inventory' && (
@@ -437,7 +520,17 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                     <QrCode className="w-4 h-4 text-accent-text" />
                   </button>
 
-                  {/* Hanya Owner yang bisa menghapus unit */}
+                  {/* Hanya Owner yang bisa mengedit & menghapus unit */}
+                  {currentRole === 'owner' && onOpenEditModal && (
+                    <button
+                      onClick={() => onOpenEditModal(item)}
+                      className="btn-glass p-2 rounded-xl text-fg-soft"
+                      title="Edit Detail Unit (Khusus Owner)"
+                    >
+                      <Pencil className="w-4 h-4 text-accent-text" />
+                    </button>
+                  )}
+
                   {currentRole === 'owner' && (
                     <button
                       onClick={() => onDeleteUnit(item.id, item.name)}
@@ -629,27 +722,242 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                     <p className="text-[11px] text-muted italic">Catatan: {bk.notes}</p>
                   )}
 
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-[10px] font-bold uppercase text-muted">
-                      Status Booking:
-                    </span>
-                    <select
-                      value={bk.status}
-                      onChange={(e) =>
-                        onUpdateBookingStatus(bk.id, e.target.value as BookingStatus)
-                      }
-                      className="field text-xs font-bold py-1 px-2.5 w-auto"
-                    >
-                      <option value="pending">⏳ Pending (Menunggu DP)</option>
-                      <option value="confirmed">✅ Confirmed (Kunci Stok)</option>
-                      <option value="picked_up">📦 Picked Up (Barang Diambil)</option>
-                      <option value="returned">🏁 Returned (Selesai Kembali)</option>
-                      <option value="cancelled">❌ Cancelled (Batal)</option>
-                    </select>
+                  <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cleanPhone = normalizeWhatsapp(bk.customerPhone);
+                          const followUpText = buildBookingFollowUpWaMessage(bk, shop.name);
+                          const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(
+                            followUpText
+                          )}`;
+                          window.open(waUrl, '_blank', 'noopener,noreferrer');
+                        }}
+                        className="btn-glass px-3 py-1.5 text-[11px] font-bold text-accent-text flex items-center gap-1.5"
+                        title="Kirim pesan WhatsApp konfirmasi / pengingat ke penyewa"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 text-accent-text" />
+                        <span>Chat WA Penyewa</span>
+                      </button>
+
+                      {onOpenBookingReceipt && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenBookingReceipt(bk)}
+                          className="btn-glass px-2.5 py-1.5 text-[11px] font-bold text-fg-soft flex items-center gap-1"
+                          title="Lihat & Cetak Nota Booking"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-accent-text" />
+                          <span>Nota</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase text-muted">
+                        Status:
+                      </span>
+                      <select
+                        value={bk.status}
+                        onChange={(e) =>
+                          onUpdateBookingStatus(bk.id, e.target.value as BookingStatus)
+                        }
+                        className="field text-xs font-bold py-1 px-2.5 w-auto"
+                      >
+                        <option value="pending">⏳ Pending (Menunggu DP)</option>
+                        <option value="confirmed">✅ Confirmed (Kunci Stok)</option>
+                        <option value="picked_up">📦 Picked Up (Barang Diambil)</option>
+                        <option value="returned">🏁 Returned (Selesai Kembali)</option>
+                        <option value="cancelled">❌ Cancelled (Batal)</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* SUB-TAB OMZET: MINI DASHBOARD ANALITIK & ALAT TERLARIS (KHUSUS OWNER PRO) */}
+      {workspaceTab === 'analytics' && currentRole === 'owner' && (
+        <div className="bento p-4 sm:p-5 border-line space-y-4">
+          {!isPro ? (
+            <div className="bento border-line-strong p-6 text-center text-fg space-y-3 bg-surface-2 aurora">
+              <div className="w-11 h-11 rounded-2xl bg-warn-soft border border-warn/30 text-warn-text flex items-center justify-center mx-auto">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <span className="chip uppercase tracking-wider text-[10px] font-extrabold text-warn-text bg-warn-soft border-warn/30">
+                  Fitur Eksklusif Bisnis PRO
+                </span>
+                <h3 className="font-display text-base font-extrabold text-fg mt-2">
+                  Dashboard Analitik Omzet, AOV &amp; Alat Paling Laris
+                </h3>
+                <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
+                  Pantau total pendapatan sewa terealisasi, potensi booking yang menunggu DP, peringkat unit penyumbang omzet tertinggi, dan unduh rekap CSV untuk pembukuan.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenUpgradeModal}
+                className="btn-brutal px-5 py-3 text-xs"
+              >
+                Buka Laporan Omzet (Upgrade PRO Mulai Rp 23rb)
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-line pb-3">
+                <div>
+                  <h3 className="font-display text-sm sm:text-base font-extrabold text-fg flex items-center gap-1.5">
+                    <TrendingUp className="w-4 h-4 text-accent-text" />
+                    <span>Ringkasan Omzet &amp; Performa Unit</span>
+                  </h3>
+                  <p className="text-[11px] text-muted">
+                    Dihitung otomatis dari transaksi berstatus Confirmed, Picked Up, dan Returned.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { label: 'Semua', days: null },
+                    { label: '30 Hari', days: 30 },
+                    { label: '7 Hari', days: 7 },
+                  ].map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setAnalyticsPeriodDays(p.days)}
+                      className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                        analyticsPeriodDays === p.days
+                          ? 'bg-accent text-accent-fg shadow-xs'
+                          : 'btn-glass text-muted'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadCsv}
+                    className="btn-glass px-3 py-1 text-[11px] font-bold text-accent-text flex items-center gap-1"
+                    title="Unduh rekap transaksi ke file CSV"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Unduh CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Kartu KPI Utama */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="bento p-3 bg-accent-soft/50 border-accent/30 space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-muted block">
+                    Omzet Terealisasi
+                  </span>
+                  <span className="font-display text-base sm:text-lg font-black text-accent-text block">
+                    {formatRp(analyticsSummary.realizedRevenue)}
+                  </span>
+                  <span className="text-[10px] text-muted block">
+                    {analyticsSummary.activeOrCompletedCount} booking sukses
+                  </span>
+                </div>
+
+                <div className="bento p-3 bg-warn-soft/40 border-warn/30 space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-muted block">
+                    Potensi Menunggu DP
+                  </span>
+                  <span className="font-display text-base sm:text-lg font-black text-warn-text block">
+                    {formatRp(analyticsSummary.pendingRevenue)}
+                  </span>
+                  <span className="text-[10px] text-muted block">
+                    {analyticsSummary.pendingCount} booking pending
+                  </span>
+                </div>
+
+                <div className="bento p-3 bg-surface-2 border-line space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-muted block">
+                    Rata-rata Sewa (AOV)
+                  </span>
+                  <span className="font-display text-base sm:text-lg font-black text-fg block">
+                    {formatRp(analyticsSummary.averageOrderValue)}
+                  </span>
+                  <span className="text-[10px] text-muted block">
+                    per transaksi sukses
+                  </span>
+                </div>
+
+                <div className="bento p-3 bg-surface-2 border-line space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-muted block">
+                    Rasio Konversi
+                  </span>
+                  <span className="font-display text-base sm:text-lg font-black text-fg block">
+                    {analyticsSummary.conversionRate}%
+                  </span>
+                  <span className="text-[10px] text-muted block">
+                    dari total {analyticsSummary.totalBookings} pengajuan
+                  </span>
+                </div>
+              </div>
+
+              {/* Peringkat Alat Paling Laris */}
+              <div className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-fg flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-accent-text" />
+                    <span>Peringkat Unit Penyumbang Omzet Tertinggi</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-muted">
+                    Top {analyticsSummary.topItems.length} Unit
+                  </span>
+                </div>
+
+                {analyticsSummary.topItems.length === 0 ? (
+                  <p className="text-xs text-muted py-4 text-center">
+                    Belum ada unit dengan booking terkonfirmasi pada periode ini.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {analyticsSummary.topItems.slice(0, 5).map((top, idx) => {
+                      const maxRev = analyticsSummary.topItems[0]?.totalRevenue || 1;
+                      const barPct = Math.max(8, Math.round((top.totalRevenue / maxRev) * 100));
+                      return (
+                        <div
+                          key={top.itemId}
+                          className="bg-surface border border-line rounded-xl p-2.5 space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="chip text-[10px] font-mono font-extrabold bg-accent-soft text-accent-text border-accent/30 py-0.5">
+                                #{idx + 1}
+                              </span>
+                              <span className="font-bold text-fg truncate">{top.itemName}</span>
+                            </div>
+                            <span className="font-display font-extrabold text-accent-text shrink-0">
+                              {formatRp(top.totalRevenue)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-accent rounded-full"
+                                style={{ width: `${barPct}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-muted font-semibold shrink-0">
+                              {top.totalQtyRented} unit tersewa ({top.bookingCount}x order)
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -945,16 +1253,247 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-fg-soft mb-1">
-                Alamat Lengkap Toko / Gudang
-              </label>
-              <input
-                type="text"
-                value={shopDraft.location}
-                onChange={(e) => setShopDraft({ ...shopDraft, location: e.target.value })}
-                className="field text-xs"
-              />
+            <div className="grid sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-xs font-bold text-fg-soft mb-1">
+                  Alamat Lengkap Toko / Gudang
+                </label>
+                <input
+                  type="text"
+                  value={shopDraft.location}
+                  onChange={(e) => setShopDraft({ ...shopDraft, location: e.target.value })}
+                  className="field text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-fg-soft mb-1">
+                  Link Titik Google Maps (Opsional)
+                </label>
+                <div className="relative">
+                  <MapPin className="w-3.5 h-3.5 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="url"
+                    placeholder="https://maps.app.goo.gl/..."
+                    value={shopDraft.mapsUrl}
+                    onChange={(e) => setShopDraft({ ...shopDraft, mapsUrl: e.target.value })}
+                    className="field pl-8 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Editor Aturan Diskon Durasi Sewa (Milik Owner) */}
+            <div className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-3">
+              <div className="flex items-start justify-between gap-2 flex-wrap">
+                <div>
+                  <span className="text-[11px] font-extrabold text-fg flex items-center gap-1.5">
+                    <Percent className="w-3.5 h-3.5 text-accent-text" />
+                    Aturan Diskon Durasi Sewa (Ditentukan Pemilik Toko)
+                  </span>
+                  <p className="text-[10px] text-muted mt-0.5">
+                    Atur potongan harga untuk penyewaan beberapa hari. Hapus semua tier jika tidak ingin memberikan diskon otomatis di katalog.
+                  </p>
+                </div>
+                {shopDraft.discountTiers.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShopDraft({ ...shopDraft, discountTiers: [] })}
+                    className="text-[10px] font-bold text-danger-text hover:underline cursor-pointer"
+                  >
+                    Matikan Semua Diskon (0%)
+                  </button>
+                )}
+              </div>
+
+              {shopDraft.discountTiers.length === 0 ? (
+                <div className="p-3 rounded-xl bg-surface border border-line text-[11px] text-muted flex items-center justify-between gap-2">
+                  <span>Tidak ada diskon durasi otomatis (Tarif = Harga Harian × Jumlah Hari).</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShopDraft({
+                        ...shopDraft,
+                        discountTiers: DEFAULT_DISCOUNT_TIERS,
+                      })
+                    }
+                    className="text-[10px] font-bold text-accent-text hover:underline shrink-0 cursor-pointer"
+                  >
+                    + Gunakan Template (3 &amp; 7 Hari)
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {shopDraft.discountTiers.map((tier, idx) => (
+                    <div
+                      key={`${tier.minDays}-${idx}`}
+                      className="flex items-center justify-between gap-2 bg-surface border border-line rounded-xl px-3 py-2 text-xs"
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-fg">
+                          Sewa &ge; {tier.minDays} Hari
+                        </span>
+                        <span className="chip bg-accent-soft text-accent-text border-accent/30 text-[10px] font-extrabold">
+                          Diskon {tier.discountPercent}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          max={90}
+                          value={tier.discountPercent}
+                          onChange={(e) => {
+                            const nextPct = Math.max(
+                              0,
+                              Math.min(90, Number(e.target.value) || 0)
+                            );
+                            const nextTiers = shopDraft.discountTiers.map((t, i) =>
+                              i === idx ? { ...t, discountPercent: nextPct } : t
+                            );
+                            setShopDraft({ ...shopDraft, discountTiers: nextTiers });
+                          }}
+                          className="field w-16 text-xs py-1 px-2 text-center font-bold"
+                          aria-label={`Persentase diskon untuk minimal ${tier.minDays} hari`}
+                        />
+                        <span className="text-xs font-bold text-muted">%</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextTiers = shopDraft.discountTiers.filter(
+                              (_, i) => i !== idx
+                            );
+                            setShopDraft({ ...shopDraft, discountTiers: nextTiers });
+                          }}
+                          className="p-1.5 text-danger-text hover:bg-danger-soft rounded-lg transition cursor-pointer"
+                          title="Hapus tier diskon ini"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-[11px] font-bold text-muted whitespace-nowrap">
+                    Min. Hari:
+                  </span>
+                  <input
+                    type="number"
+                    min={2}
+                    max={60}
+                    value={newTierDays}
+                    onChange={(e) => setNewTierDays(e.target.value)}
+                    className="field text-xs py-1.5 px-2.5 w-20"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-[11px] font-bold text-muted whitespace-nowrap">
+                    Diskon (%):
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={newTierPercent}
+                    onChange={(e) => setNewTierPercent(e.target.value)}
+                    className="field text-xs py-1.5 px-2.5 w-20"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const minDays = Math.floor(Number(newTierDays));
+                    const discountPercent = Math.round(Number(newTierPercent));
+                    if (minDays < 2 || minDays > 60) {
+                      triggerToast('Minimal hari tier diskon harus antara 2 s/d 60 hari.');
+                      return;
+                    }
+                    if (discountPercent < 1 || discountPercent > 90) {
+                      triggerToast('Persentase diskon harus antara 1% s/d 90%.');
+                      return;
+                    }
+                    const merged = normalizeDiscountTiers([
+                      ...shopDraft.discountTiers.filter((t) => t.minDays !== minDays),
+                      { minDays, discountPercent },
+                    ]);
+                    setShopDraft({ ...shopDraft, discountTiers: merged });
+                  }}
+                  className="btn-glass text-xs px-3 py-1.5 font-bold text-accent-text shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Tambah Tier</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Editor Ketentuan & Jaminan Sewa (terms) */}
+            <div className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-2.5">
+              <div>
+                <span className="text-[11px] font-extrabold text-fg flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-accent-text" />
+                  Ketentuan &amp; Jaminan Sewa (Tampil di Header Katalog)
+                </span>
+                <p className="text-[10px] text-muted mt-0.5">
+                  Cantumkan syarat kartu identitas (E-KTP), aturan DP, atau denda keterlambatan toko Anda.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                {shopDraft.terms.map((term, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={term}
+                      onChange={(e) => {
+                        const nextTerms = shopDraft.terms.map((t, i) =>
+                          i === idx ? e.target.value : t
+                        );
+                        setShopDraft({ ...shopDraft, terms: nextTerms });
+                      }}
+                      className="field text-xs py-1.5 flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextTerms = shopDraft.terms.filter((_, i) => i !== idx);
+                        setShopDraft({ ...shopDraft, terms: nextTerms });
+                      }}
+                      className="p-1.5 text-danger-text hover:bg-danger-soft rounded-lg transition cursor-pointer"
+                      title="Hapus poin ketentuan"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="Tambah poin ketentuan sewa baru..."
+                  value={newTermInput}
+                  onChange={(e) => setNewTermInput(e.target.value)}
+                  className="field text-xs py-1.5 flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!newTermInput.trim()) return;
+                    setShopDraft({
+                      ...shopDraft,
+                      terms: [...shopDraft.terms, newTermInput.trim()],
+                    });
+                    setNewTermInput('');
+                  }}
+                  className="btn-glass text-xs px-3 py-1.5 font-bold text-accent-text shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Tambah Poin</span>
+                </button>
+              </div>
             </div>
 
             {/* Manajemen Anggota & Undangan Email Staf Gudang */}
@@ -1029,6 +1568,39 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                     </button>
                   </div>
 
+                  {/* Daftar Anggota Tim Aktif */}
+                  {members.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-bold uppercase text-subtle">
+                        Anggota Tim Aktif ({members.length})
+                      </span>
+                      {members.map((m) => (
+                        <div
+                          key={`${m.shopSlug}-${m.userId}`}
+                          className="flex items-center justify-between gap-2 text-[11px] bg-surface border border-line rounded-xl px-2.5 py-1.5"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-mono text-fg-soft truncate">
+                              {m.email || m.userId}
+                            </span>
+                            <span className="chip text-[9px] font-bold uppercase">
+                              {m.role === 'owner' ? '👑 Owner' : '👷 Staf Gudang'}
+                            </span>
+                          </div>
+                          {m.role !== 'owner' && onRemoveMember && (
+                            <button
+                              type="button"
+                              onClick={() => onRemoveMember(m.userId, m.email)}
+                              className="text-[10px] font-bold text-danger-text hover:underline shrink-0 cursor-pointer"
+                            >
+                              Cabut Akses
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {invites.length > 0 && (
                     <div className="space-y-1.5 pt-1">
                       <span className="text-[10px] font-bold uppercase text-subtle">
@@ -1037,12 +1609,23 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                       {invites.map((inv) => (
                         <div
                           key={inv.id}
-                          className="flex items-center justify-between text-[11px] bg-surface border border-line rounded-xl px-2.5 py-1.5"
+                          className="flex items-center justify-between gap-2 text-[11px] bg-surface border border-line rounded-xl px-2.5 py-1.5"
                         >
                           <span className="font-mono text-fg-soft truncate">{inv.email}</span>
-                          <span className="chip text-[10px] font-bold uppercase">
-                            {inv.role} • {inv.acceptedAt ? 'Aktif' : 'Menunggu Login'}
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="chip text-[10px] font-bold uppercase">
+                              {inv.role} • {inv.acceptedAt ? 'Aktif' : 'Menunggu Login'}
+                            </span>
+                            {onRevokeInvite && (
+                              <button
+                                type="button"
+                                onClick={() => onRevokeInvite(inv.id, inv.email)}
+                                className="text-[10px] font-bold text-danger-text hover:underline cursor-pointer"
+                              >
+                                Hapus
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1063,6 +1646,10 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   triggerToast('Nomor WhatsApp harus valid (contoh: 08123456789).');
                   return;
                 }
+                const cleanTerms = shopDraft.terms
+                  .map((t) => t.trim())
+                  .filter((t) => t.length > 0);
+                const cleanDiscountTiers = normalizeDiscountTiers(shopDraft.discountTiers);
                 onSaveShopSettings({
                   ...shop,
                   name: cleanName,
@@ -1070,8 +1657,11 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   whatsapp: cleanWa,
                   hours: shopDraft.hours.trim() || shop.hours,
                   location: shopDraft.location.trim() || shop.location,
+                  mapsUrl: shopDraft.mapsUrl.trim(),
+                  terms: cleanTerms,
+                  discountTiers: cleanDiscountTiers,
                 });
-                onRecordAuditLog('Memperbarui pengaturan profil & informasi toko');
+                onRecordAuditLog('Memperbarui pengaturan profil, S&K, dan aturan diskon toko');
                 triggerToast('Pengaturan toko berhasil disimpan!');
               }}
               className="btn-brutal w-full py-3 text-xs"

@@ -1,4 +1,4 @@
-import type { Shop, RentalItem, DurationOption } from '../types/index.ts';
+import type { Shop, RentalItem, DurationOption, Booking } from '../types/index.ts';
 
 export const DEFAULT_SHOPS: Shop[] = [
   {
@@ -17,6 +17,10 @@ export const DEFAULT_SHOPS: Shop[] = [
       'Pelunasan dilakukan saat pengambilan unit (Tersedia QRIS & Transfer Bank).',
       'Keterlambatan pengembalian dikenakan denda 10% per jam dari tarif harian.',
       'Segala bentuk kerusakan akibat kelalaian pemakaian menjadi tanggung jawab penyewa.',
+    ],
+    discountTiers: [
+      { minDays: 3, discountPercent: 10 },
+      { minDays: 7, discountPercent: 25 },
     ],
     partnerShop: {
       name: 'Kaltim Pro Kamera & Multimedia',
@@ -37,6 +41,10 @@ export const DEFAULT_SHOPS: Shop[] = [
     terms: [
       'Wajib menunjukkan minimal 2 identitas aktif yang sesuai (E-KTP + SIM/NPWP/ID Kerja).',
       'Booking jadwal tanggal wajib DP minimal 30% melalui QRIS resmi toko.',
+    ],
+    discountTiers: [
+      { minDays: 3, discountPercent: 10 },
+      { minDays: 7, discountPercent: 25 },
     ],
     partnerShop: {
       name: 'Borneo Outdoor & Teknik Rental',
@@ -221,4 +229,134 @@ export const CATEGORIES = [
   'Camping',
   'Alat Teknik/Proyek',
   'Kamera & Audio',
+];
+
+export const DEFAULT_BOOKINGS: Booking[] = [
+  {
+    id: '00000000-0000-4000-9000-000000000001',
+    shopSlug: 'borneo-rental',
+    code: 'SBR-261120-BR01',
+    customerName: 'Budi Santoso',
+    customerPhone: '6281255667788',
+    startDate: '2026-11-20',
+    endDate: '2026-11-22',
+    durationDays: 3,
+    status: 'returned',
+    totalAmount: 553500,
+    notes: 'Proyek Ruko MT Haryono & Camping Tim',
+    createdAt: '2026-11-20T08:30:00Z',
+    lines: [
+      {
+        id: 'bl-demo-1',
+        bookingId: '00000000-0000-4000-9000-000000000001',
+        itemId: '00000000-0000-4000-8000-000000000002',
+        itemName: 'Genset Silent Inverter 2200W',
+        qty: 1,
+        unitPricePerDay: 175000,
+        subtotal: 472500,
+      },
+      {
+        id: 'bl-demo-2',
+        bookingId: '00000000-0000-4000-9000-000000000001',
+        itemId: '00000000-0000-4000-8000-000000000006',
+        itemName: 'Kompor Portable Windproof + Gas',
+        qty: 1,
+        unitPricePerDay: 30000,
+        subtotal: 81000,
+      },
+    ],
+  },
+  {
+    id: '00000000-0000-4000-9000-000000000002',
+    shopSlug: 'borneo-rental',
+    code: 'SBR-261122-BR02',
+    customerName: 'Rina Wulandari',
+    customerPhone: '6281344556677',
+    startDate: '2026-11-25',
+    endDate: '2026-11-26',
+    durationDays: 2,
+    status: 'confirmed',
+    totalAmount: 380000,
+    notes: 'Ambil jam 09:00 WITA, KTP asli dibawa',
+    createdAt: '2026-11-22T09:15:00Z',
+    lines: [
+      {
+        id: 'bl-demo-3',
+        bookingId: '00000000-0000-4000-9000-000000000002',
+        itemId: '00000000-0000-4000-8000-000000000001',
+        itemName: 'Tenda Eiger Kapasitas 4-5 Orang',
+        qty: 2,
+        unitPricePerDay: 55000,
+        subtotal: 220000,
+      },
+      {
+        id: 'bl-demo-4',
+        bookingId: '00000000-0000-4000-9000-000000000002',
+        itemId: '00000000-0000-4000-8000-000000000005',
+        itemName: 'Paket 4 Unit HT (Handy Talky) Event',
+        qty: 1,
+        unitPricePerDay: 80000,
+        subtotal: 160000,
+      },
+    ],
+  },
+  {
+    id: '00000000-0000-4000-9000-000000000003',
+    shopSlug: 'borneo-rental',
+    code: 'SBR-261122-BR03',
+    customerName: 'Hendra Saputra',
+    customerPhone: '6281299001122',
+    startDate: '2026-11-28',
+    endDate: '2026-11-28',
+    durationDays: 1,
+    status: 'pending',
+    totalAmount: 150000,
+    notes: 'Menunggu transfer DP via QRIS',
+    createdAt: '2026-11-22T11:00:00Z',
+    lines: [
+      {
+        id: 'bl-demo-5',
+        bookingId: '00000000-0000-4000-9000-000000000003',
+        itemId: '00000000-0000-4000-8000-000000000004',
+        itemName: 'Kamera Mirrorless Sony A6400 + Kit',
+        qty: 1,
+        unitPricePerDay: 150000,
+        subtotal: 150000,
+      },
+    ],
+  },
+  {
+    id: '00000000-0000-4000-9000-000000000004',
+    shopSlug: 'kaltim-kamera',
+    code: 'SBR-261121-KK01',
+    customerName: 'Dimas Aditya',
+    customerPhone: '6281155443322',
+    startDate: '2026-11-21',
+    endDate: '2026-11-23',
+    durationDays: 3,
+    status: 'picked_up',
+    totalAmount: 1039500,
+    notes: 'Liputan Wedding Hotel Novotel Balikpapan',
+    createdAt: '2026-11-21T07:45:00Z',
+    lines: [
+      {
+        id: 'bl-demo-6',
+        bookingId: '00000000-0000-4000-9000-000000000004',
+        itemId: '00000000-0000-4000-8000-000000000007',
+        itemName: 'Sony A7III Fullframe + Tamron 28-75mm',
+        qty: 1,
+        unitPricePerDay: 275000,
+        subtotal: 742500,
+      },
+      {
+        id: 'bl-demo-7',
+        bookingId: '00000000-0000-4000-9000-000000000004',
+        itemId: '00000000-0000-4000-8000-000000000008',
+        itemName: 'Stabilizer Gimbal DJI RS3 Mini',
+        qty: 1,
+        unitPricePerDay: 110000,
+        subtotal: 297000,
+      },
+    ],
+  },
 ];

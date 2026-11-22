@@ -8,6 +8,7 @@ import {
   WorkspaceTab,
   ItemStatus,
   Role,
+  Booking,
 } from '@/types';
 import { DURATION_OPTIONS } from '@/data/mockData';
 import {
@@ -16,6 +17,7 @@ import {
   addDaysToIsoDate,
   calculateCartSummary,
   buildWhatsappCheckoutMessage,
+  buildShopDurationOptions,
   NewShopSchema,
   NewItemSchema,
   CreateBookingSchema,
@@ -33,6 +35,8 @@ import { WorkspaceView } from '@/components/WorkspaceView';
 import { AuthModal } from '@/components/AuthModal';
 import { WaPreviewModal } from '@/components/WaPreviewModal';
 import { AddItemModal, NewItemFormState } from '@/components/AddItemModal';
+import { ItemDetailModal } from '@/components/ItemDetailModal';
+import { BookingStatusModal } from '@/components/BookingStatusModal';
 import { QrModal } from '@/components/QrModal';
 import { UpgradeModal } from '@/components/UpgradeModal';
 
@@ -69,13 +73,14 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   const [selectedStartDate, setSelectedStartDate] = useState<string>('');
   const startDate = selectedStartDate || todayIso;
   const setStartDate = setSelectedStartDate;
-  const [durationDays, setDurationDays] = useState<number>(2);
+  const [durationDays, setDurationDays] = useState<number>(1);
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [showTerms, setShowTerms] = useState(false);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [showWaPreviewModal, setShowWaPreviewModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [detailItem, setDetailItem] = useState<RentalItem | null>(null);
   const [manualHighlightedItemId, setHighlightedItemId] = useState<string | null | undefined>(
     undefined
   );
@@ -85,6 +90,16 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       : null;
   const highlightedItemId: string | null =
     manualHighlightedItemId !== undefined ? manualHighlightedItemId : urlItemParam;
+
+  const urlBookingParam =
+    mounted && typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('booking')
+      : null;
+  const [manualBookingModalOpen, setBookingModalOpen] = useState<boolean | null>(null);
+  const [selectedReceiptBooking, setSelectedReceiptBooking] = useState<Booking | null>(null);
+  const [lookupInitialCode, setLookupInitialCode] = useState<string>('');
+  const showBookingStatusModal =
+    manualBookingModalOpen !== null ? manualBookingModalOpen : Boolean(urlBookingParam);
 
   // Auth & Role dari Supabase Auth + shop_members
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -109,6 +124,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     shopLogs,
     bookings,
     invites,
+    members,
     availabilityMap,
     saveItemToCloud,
     deleteItemFromCloud,
@@ -118,7 +134,10 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     createShopAtomically,
     createBookingOrder,
     updateBookingStatus,
+    lookupBookingByCode,
     inviteShopMember,
+    removeShopMember,
+    revokeShopInvite,
     appendLocalAuditLog,
   } = useShopData({
     activeShopSlug,
@@ -131,6 +150,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   // Workspace State
   const [adminSearch, setAdminSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<RentalItem | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedQrItem, setSelectedQrItem] = useState<RentalItem | null>(null);
@@ -143,6 +163,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     stock: 1,
     spec1: '',
     spec2: '',
+    spec3: '',
     imageUrl: '',
   });
 
@@ -198,11 +219,17 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     }
   }, [initialShopSlug, authLoading, user, memberships]);
 
+  const shopDurationOptions = useMemo(() => {
+    return buildShopDurationOptions(shop?.discountTiers, durationDays);
+  }, [shop?.discountTiers, durationDays]);
+
   const currentDurationObj = useMemo(() => {
     return (
-      DURATION_OPTIONS.find((d) => d.days === Number(durationDays)) || DURATION_OPTIONS[0]
+      shopDurationOptions.find((d) => d.days === Number(durationDays)) ||
+      shopDurationOptions[0] ||
+      DURATION_OPTIONS[0]
     );
-  }, [durationDays]);
+  }, [shopDurationOptions, durationDays]);
 
   const filteredAdminItems = useMemo(() => {
     const q = adminSearch.toLowerCase();
@@ -255,8 +282,14 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   };
 
   const cartSummary = useMemo(() => {
-    return calculateCartSummary(cart, items, currentDurationObj, availabilityMap);
-  }, [cart, items, currentDurationObj, availabilityMap]);
+    return calculateCartSummary(
+      cart,
+      items,
+      currentDurationObj,
+      availabilityMap,
+      shop?.discountTiers
+    );
+  }, [cart, items, currentDurationObj, availabilityMap, shop?.discountTiers]);
 
   const endDateIso = useMemo(
     () => addDaysToIsoDate(startDate, durationDays),
@@ -331,6 +364,10 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       selectedList: cartSummary.selectedList,
     });
 
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : 'https://sebaraja.com';
+    const trackingUrl = `${origin}/${shop.slug}?booking=${encodeURIComponent(booking.code)}`;
+
     const msgWithCode = buildWhatsappCheckoutMessage({
       shopName: shop.name,
       bookingCode: booking.code,
@@ -340,6 +377,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       durationLabel: currentDurationObj.label,
       cartSummary,
       notes: booking.notes,
+      trackingUrl,
     });
 
     setShowWaPreviewModal(false);
@@ -391,15 +429,47 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     await saveItemToCloud({ ...target, [field]: value });
   };
 
+  const handleOpenCreateModal = () => {
+    setEditingItem(null);
+    setNewItemForm({
+      name: '',
+      sku: '',
+      category: 'Camping',
+      pricePerDay: '',
+      stock: 1,
+      spec1: '',
+      spec2: '',
+      spec3: '',
+      imageUrl: '',
+    });
+    setShowAddModal(true);
+  };
+
+  const handleOpenEditModal = (item: RentalItem) => {
+    setEditingItem(item);
+    setNewItemForm({
+      name: item.name,
+      sku: item.sku || '',
+      category: item.category || 'Camping',
+      pricePerDay: String(item.pricePerDay),
+      stock: item.stock,
+      spec1: item.specs?.[0] || '',
+      spec2: item.specs?.[1] || '',
+      spec3: item.specs?.[2] || '',
+      imageUrl: item.imageUrl || '',
+    });
+    setShowAddModal(true);
+  };
+
   const handleAddNewItem = async (formData: NewItemFormState) => {
     if (!shop) {
       throw new Error('Data profil toko tidak ditemukan.');
     }
     if (currentRole !== 'owner') {
-      throw new Error('Akses Ditolak: Hanya Owner yang dapat menambah unit baru.');
+      throw new Error('Akses Ditolak: Hanya Owner yang dapat menambah atau mengedit unit.');
     }
 
-    if (!canAddRentalItem(shop, items.length)) {
+    if (!editingItem && !canAddRentalItem(shop, items.length)) {
       setShowAddModal(false);
       setShowUpgradeModal(true);
       throw new Error(`Batas paket Starter tercapai (maksimal ${STARTER_MAX_ITEMS} unit alat). Silakan upgrade ke Bisnis PRO.`);
@@ -407,7 +477,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
 
     const parsed = NewItemSchema.safeParse(formData);
     if (!parsed.success) {
-      throw new Error(parsed.error.issues[0]?.message || 'Periksa kembali data unit baru.');
+      throw new Error(parsed.error.issues[0]?.message || 'Periksa kembali data unit.');
     }
 
     const finalCategory = parsed.data.category;
@@ -470,39 +540,53 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
 
     const autoSku =
       parsed.data.sku ||
+      editingItem?.sku ||
       `${shop.slug.substring(0, 3).toUpperCase()}-${uniqueSuffix}`;
 
-    const newItem: RentalItem = {
+    const customSpecs = [
+      parsed.data.spec1,
+      parsed.data.spec2,
+      parsed.data.spec3,
+    ]
+      .map((s) => (s || '').trim())
+      .filter((s) => s.length > 0);
+
+    const finalSpecs =
+      customSpecs.length > 0
+        ? customSpecs
+        : ['Kondisi prima & terawat', 'Siap pakai lengkap dengan tas/box'];
+
+    const itemPayload: RentalItem = {
       id:
-        typeof crypto !== 'undefined' && crypto.randomUUID
+        editingItem?.id ||
+        (typeof crypto !== 'undefined' && crypto.randomUUID
           ? crypto.randomUUID()
-          : `item-${Date.now()}`,
+          : `item-${Date.now()}`),
       shopSlug: shop.slug,
       sku: autoSku,
       name: parsed.data.name,
       category: finalCategory,
       iconType: getIconForCategory(finalCategory),
       pricePerDay: parsed.data.pricePerDay,
-      status: 'available',
+      status: editingItem?.status || 'available',
       stock: parsed.data.stock,
-      availableAt: '',
-      renterNote: '',
+      availableAt: editingItem?.availableAt || '',
+      renterNote: editingItem?.renterNote || '',
       lastUpdatedBy: 'Owner',
-      specs: [
-        parsed.data.spec1 || 'Kondisi prima & terawat',
-        parsed.data.spec2 || 'Siap pakai lengkap dengan tas/box',
-      ],
+      specs: finalSpecs,
       imageBg: getBgForCategory(finalCategory),
       imageUrl: parsed.data.imageUrl || undefined,
     };
 
-    const ok = await saveItemToCloud(newItem);
+    const ok = await saveItemToCloud(itemPayload);
     if (!ok) {
       throw new Error('Gagal menyimpan unit ke database cloud.');
     }
 
     appendLocalAuditLog(
-      `Menambahkan unit baru "${newItem.name}" (${formatRp(newItem.pricePerDay)}/hari) - Kategori: ${newItem.category}`
+      editingItem
+        ? `Memperbarui detail unit "${itemPayload.name}" (${formatRp(itemPayload.pricePerDay)}/hari)`
+        : `Menambahkan unit baru "${itemPayload.name}" (${formatRp(itemPayload.pricePerDay)}/hari) - Kategori: ${itemPayload.category}`
     );
     setNewItemForm({
       name: '',
@@ -512,10 +596,16 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       stock: 1,
       spec1: '',
       spec2: '',
+      spec3: '',
       imageUrl: '',
     });
+    setEditingItem(null);
     setShowAddModal(false);
-    triggerToast('Unit baru berhasil ditambahkan ke katalog!');
+    triggerToast(
+      editingItem
+        ? 'Perubahan detail unit berhasil disimpan!'
+        : 'Unit baru berhasil ditambahkan ke katalog!'
+    );
   };
 
   const handleCreateNewShop = async (e: React.FormEvent) => {
@@ -706,6 +796,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               showTerms={showTerms}
               setShowTerms={setShowTerms}
               startDate={startDate}
+              endDate={endDateIso}
               minDate={todayIso}
               setStartDate={(val) => {
                 if (val < todayIso) {
@@ -717,7 +808,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               }}
               durationDays={durationDays}
               setDurationDays={setDurationDays}
-              durationOptions={DURATION_OPTIONS}
+              durationOptions={shopDurationOptions}
               currentDurationObj={currentDurationObj}
               availabilityMap={availabilityMap}
               searchQuery={searchQuery}
@@ -746,6 +837,12 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
                   window.history.replaceState({}, '', `/${shop.slug}`);
                 }
               }}
+              onSelectItemDetail={(item) => setDetailItem(item)}
+              onOpenBookingLookup={() => {
+                setSelectedReceiptBooking(null);
+                setLookupInitialCode(urlBookingParam || '');
+                setBookingModalOpen(true);
+              }}
             />
           )}
 
@@ -760,15 +857,24 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               shopLogs={shopLogs}
               bookings={bookings}
               invites={invites}
+              members={members}
               onUpdateBookingStatus={updateBookingStatus}
               onInviteMember={handleInviteMember}
+              onRemoveMember={removeShopMember}
+              onRevokeInvite={revokeShopInvite}
               adminSearch={adminSearch}
               setAdminSearch={setAdminSearch}
               filteredAdminItems={filteredAdminItems}
-              onOpenAddModal={() => setShowAddModal(true)}
+              onOpenAddModal={handleOpenCreateModal}
+              onOpenEditModal={handleOpenEditModal}
               onOpenQrModal={(item) => {
                 setSelectedQrItem(item);
                 setShowQrModal(true);
+              }}
+              onOpenBookingReceipt={(bk) => {
+                setSelectedReceiptBooking(bk);
+                setLookupInitialCode(bk.code);
+                setBookingModalOpen(true);
               }}
               onDeleteUnit={deleteItemFromCloud}
               onStatusChange={handleStatusChange}
@@ -823,12 +929,54 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
 
           <AddItemModal
             isOpen={showAddModal}
-            onClose={() => setShowAddModal(false)}
+            onClose={() => {
+              setShowAddModal(false);
+              setEditingItem(null);
+            }}
             form={newItemForm}
             setForm={setNewItemForm}
             onSubmit={handleAddNewItem}
             categories={selectableCategories}
             shopSlug={shop.slug}
+            isLimitReached={!canAddRentalItem(shop, items.length)}
+            onOpenUpgradeModal={() => setShowUpgradeModal(true)}
+            editingItem={editingItem}
+          />
+
+          <ItemDetailModal
+            item={detailItem}
+            onClose={() => setDetailItem(null)}
+            shopName={shop.name}
+            durationDays={durationDays}
+            currentDurationObj={currentDurationObj}
+            effectiveStock={
+              detailItem
+                ? availabilityMap && typeof availabilityMap[detailItem.id] === 'number'
+                  ? availabilityMap[detailItem.id]
+                  : detailItem.status === 'available'
+                  ? detailItem.stock
+                  : 0
+                : 0
+            }
+            inCartQty={detailItem ? cart[detailItem.id] || 0 : 0}
+            onUpdateCartQty={updateCartQty}
+            onOpenWhatsApp={handleOpenWhatsApp}
+            formatRp={formatRp}
+          />
+
+          <BookingStatusModal
+            isOpen={showBookingStatusModal}
+            onClose={() => {
+              setBookingModalOpen(false);
+              setSelectedReceiptBooking(null);
+            }}
+            shop={shop}
+            initialBooking={selectedReceiptBooking}
+            initialCode={lookupInitialCode || urlBookingParam || ''}
+            onLookupByCode={lookupBookingByCode}
+            demoSampleCodes={bookings.slice(0, 3).map((b) => b.code)}
+            formatRp={formatRp}
+            onOpenWhatsApp={handleOpenWhatsApp}
           />
 
           <QrModal

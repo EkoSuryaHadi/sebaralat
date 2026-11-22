@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, X, Link2, Loader2, PlusCircle, AlertCircle, Sparkles } from 'lucide-react';
+import { Upload, X, Link2, Loader2, PlusCircle, AlertCircle, Sparkles, Pencil } from 'lucide-react';
 import { uploadItemImage } from '@/lib/imageUtils';
+import { RentalItem } from '@/types';
 
 export interface NewItemFormState {
   name: string;
@@ -12,6 +13,7 @@ export interface NewItemFormState {
   stock: number;
   spec1: string;
   spec2: string;
+  spec3?: string;
   imageUrl?: string;
 }
 
@@ -25,6 +27,7 @@ interface AddItemModalProps {
   shopSlug?: string;
   isLimitReached?: boolean;
   onOpenUpgradeModal?: () => void;
+  editingItem?: RentalItem | null;
 }
 
 export const AddItemModal: React.FC<AddItemModalProps> = ({
@@ -37,6 +40,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   shopSlug = 'general',
   isLimitReached = false,
   onOpenUpgradeModal,
+  editingItem = null,
 }) => {
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryInput, setCustomCategoryInput] = useState('');
@@ -49,7 +53,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
 
   if (!isOpen) return null;
 
-  if (isLimitReached) {
+  if (isLimitReached && !editingItem) {
     return (
       <div className="fixed inset-0 z-50 glass-overlay flex items-center justify-center p-4">
         <div className="glass-strong animate-rise w-full max-w-sm rounded-bento p-6 space-y-4 text-center text-fg">
@@ -195,8 +199,17 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
       >
         <div className="flex items-center justify-between border-b border-line pb-3">
           <h3 className="font-display text-base font-extrabold text-fg flex items-center gap-2">
-            <PlusCircle className="w-4 h-4 text-accent-text" />
-            <span>Tambah Unit Inventaris</span>
+            {editingItem ? (
+              <>
+                <Pencil className="w-4 h-4 text-accent-text" />
+                <span>Edit Unit Inventaris</span>
+              </>
+            ) : (
+              <>
+                <PlusCircle className="w-4 h-4 text-accent-text" />
+                <span>Tambah Unit Inventaris</span>
+              </>
+            )}
           </h3>
           <button
             type="button"
@@ -408,7 +421,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
 
         <div className="grid grid-cols-2 gap-2.5">
           <div>
-            <label className="block text-xs font-bold text-fg-soft mb-1">Spesifikasi Utama</label>
+            <label className="block text-xs font-bold text-fg-soft mb-1">Spesifikasi Utama (Baris 1)</label>
             <input
               type="text"
               placeholder="Contoh: 3600 ANSI Lumens + HDMI"
@@ -421,9 +434,32 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
             <label className="block text-xs font-bold text-fg-soft mb-1">Jumlah Stok</label>
             <input
               type="number"
-              min="1"
+              min="0"
               value={form.stock}
-              onChange={(e) => setForm({ ...form, stock: Number(e.target.value) || 1 })}
+              onChange={(e) => setForm({ ...form, stock: Math.max(0, Number(e.target.value) || 0) })}
+              className="field text-xs py-2"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <div>
+            <label className="block text-xs font-bold text-fg-soft mb-1">Spesifikasi Tambahan (Baris 2)</label>
+            <input
+              type="text"
+              placeholder="Contoh: Include 2 Baterai + Tas"
+              value={form.spec2}
+              onChange={(e) => setForm({ ...form, spec2: e.target.value })}
+              className="field text-xs py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-fg-soft mb-1">Kelengkapan (Baris 3 - Opsional)</label>
+            <input
+              type="text"
+              placeholder="Contoh: Charger + Kabel Ekstensi"
+              value={form.spec3 || ''}
+              onChange={(e) => setForm({ ...form, spec3: e.target.value })}
               className="field text-xs py-2"
             />
           </div>
@@ -447,7 +483,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               <span>Menyimpan ke Katalog...</span>
             </>
           ) : (
-            <span>Simpan ke Katalog</span>
+            <span>{editingItem ? 'Simpan Perubahan Unit' : 'Simpan ke Katalog'}</span>
           )}
         </button>
       </form>

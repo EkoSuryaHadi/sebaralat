@@ -55,7 +55,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 glass-overlay flex items-center justify-center p-4 overflow-y-auto">
-      <div className="glass-strong text-fg border border-line-strong w-full max-w-lg rounded-[var(--radius-bento)] p-6 sm:p-7 space-y-5 shadow-2xl relative my-8 animate-rise">
+      <div className="glass-strong text-fg border border-line-strong w-full max-w-lg rounded-bento p-6 sm:p-7 space-y-5 shadow-2xl relative my-8 animate-rise">
         {/* Tombol Tutup */}
         <button
           onClick={onClose}
@@ -156,7 +156,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
             className="btn-brutal w-full py-3.5 text-xs sm:text-sm"
           >
             <MessageCircle className="w-4 h-4 fill-current" />
-            <span>AJUKAN UPGRADE KE ADMIN SEBARALAT</span>
+            <span>AJUKAN UPGRADE KE ADMIN SEBARAJA</span>
           </button>
 
           {/* Simulator untuk Pengujian Demo */}

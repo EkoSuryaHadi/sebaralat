@@ -8,6 +8,12 @@ import {
   calculateCartSummary,
   computeShopAvailabilityMap,
   getDurationMultiplier,
+  buildShopDurationOptions,
+  buildGoogleMapsUrl,
+  buildBookingFollowUpWaMessage,
+  maskCustomerPhone,
+  computeShopAnalytics,
+  buildBookingsCsv,
   resolveEffectiveRole,
   sanitizeItemForRole,
   buildWhatsappCheckoutMessage,
@@ -15,6 +21,7 @@ import {
   NewItemSchema,
   CreateBookingSchema,
   InviteMemberSchema,
+  DiscountTierSchema,
 } from '../validators.ts';
 import {
   mapShopFromDb,
@@ -223,6 +230,185 @@ describe('Validasi Skema Zod & Keamanan Data Mapper', () => {
     assert.equal(getDurationMultiplier(7), 5.25);
     assert.equal(getDurationMultiplier(10), 7.5);
     assert.equal(getDurationMultiplier(0), 1);
+  });
+
+  it('getDurationMultiplier mendukung tier diskon fleksibel milik Owner dan 0% (tanpa diskon)', () => {
+    assert.equal(getDurationMultiplier(3, []), 3);
+    assert.equal(getDurationMultiplier(7, []), 7);
+
+    const customTiers = [
+      { minDays: 3, discountPercent: 10 },
+      { minDays: 7, discountPercent: 25 },
+      { minDays: 14, discountPercent: 40 },
+    ];
+    assert.equal(getDurationMultiplier(1, customTiers), 1);
+    assert.equal(getDurationMultiplier(2, customTiers), 2);
+    assert.equal(getDurationMultiplier(3, customTiers), 2.7);
+    assert.equal(getDurationMultiplier(5, customTiers), 4.5);
+    assert.equal(getDurationMultiplier(7, customTiers), 5.25);
+    assert.equal(getDurationMultiplier(14, customTiers), 8.4);
+  });
+
+  it('buildShopDurationOptions membentuk opsi paket populer + hari kustom sesuai tier diskon toko', () => {
+    const tiers = [{ minDays: 5, discountPercent: 15 }];
+    const opts = buildShopDurationOptions(tiers, 4);
+    const daysList = opts.map((o) => o.days);
+    assert.ok(daysList.includes(1));
+    assert.ok(daysList.includes(4));
+    assert.ok(daysList.includes(5));
+    const fiveDayOpt = opts.find((o) => o.days === 5)!;
+    assert.equal(fiveDayOpt.discountTag, 'Hemat 15%');
+    const threeDayOpt = opts.find((o) => o.days === 3)!;
+    assert.equal(threeDayOpt.discountTag, null);
+  });
+
+  it('buildGoogleMapsUrl menggunakan mapsUrl kustom jika valid atau fallback ke query pencarian Maps', () => {
+    assert.equal(
+      buildGoogleMapsUrl('Balikpapan', 'https://maps.app.goo.gl/abc123'),
+      'https://maps.app.goo.gl/abc123'
+    );
+    assert.equal(
+      buildGoogleMapsUrl('Jl. MT Haryono, Balikpapan', ''),
+      'https://www.google.com/maps/search/?api=1&query=Jl.%20MT%20Haryono%2C%20Balikpapan'
+    );
+  });
+
+  it('buildBookingFollowUpWaMessage membuat pesan follow-up sesuai status booking', () => {
+    const sampleBooking = {
+      id: 'bk-1',
+      shopSlug: 'borneo-rental',
+      code: 'SBR-261122-ABCD',
+      customerName: 'Budi Santoso',
+      customerPhone: '628123456789',
+      startDate: '2026-11-22',
+      endDate: '2026-11-24',
+      durationDays: 3,
+      status: 'pending' as const,
+      totalAmount: 150000,
+      notes: '',
+      createdAt: '2026-11-22T00:00:00Z',
+    };
+    const pendingMsg = buildBookingFollowUpWaMessage(sampleBooking, 'Borneo Rental');
+    assert.ok(pendingMsg.includes('SBR-261122-ABCD'));
+    assert.ok(pendingMsg.includes('Budi Santoso'));
+
+    const pickedUpMsg = buildBookingFollowUpWaMessage(
+      { ...sampleBooking, status: 'picked_up' },
+      'Borneo Rental'
+    );
+    assert.ok(pickedUpMsg.includes('2026-11-24'));
+    assert.equal(
+      DiscountTierSchema.safeParse({ minDays: 3, discountPercent: 10 }).success,
+      true
+    );
+  });
+
+  it('maskCustomerPhone menyamarkan digit tengah nomor telepon penyewa untuk tampilan publik', () => {
+    assert.equal(maskCustomerPhone('6281234567890'), '62812****890');
+    assert.equal(maskCustomerPhone('0812998877'), '0812****77');
+  });
+
+  it('computeShopAnalytics menghitung omzet terealisasi, pending, konversi, AOV, dan top items dengan akurat', () => {
+    const nowMs = Date.parse('2026-11-22T12:00:00Z');
+    const sampleBookings = [
+      {
+        id: 'b1',
+        shopSlug: 'borneo-rental',
+        code: 'SBR-261120-AA11',
+        customerName: 'Andi',
+        customerPhone: '628111222333',
+        startDate: '2026-11-20',
+        endDate: '2026-11-21',
+        durationDays: 2,
+        status: 'returned' as const,
+        totalAmount: 200000,
+        notes: '',
+        createdAt: '2026-11-20T08:00:00Z',
+        lines: [
+          {
+            id: 'l1',
+            bookingId: 'b1',
+            itemId: 'i1',
+            itemName: 'Tenda Eiger 4P',
+            qty: 2,
+            unitPricePerDay: 50000,
+            subtotal: 200000,
+          },
+        ],
+      },
+      {
+        id: 'b2',
+        shopSlug: 'borneo-rental',
+        code: 'SBR-261121-BB22',
+        customerName: 'Budi',
+        customerPhone: '628111222444',
+        startDate: '2026-11-21',
+        endDate: '2026-11-22',
+        durationDays: 2,
+        status: 'confirmed' as const,
+        totalAmount: 350000,
+        notes: '',
+        createdAt: '2026-11-21T08:00:00Z',
+        lines: [
+          {
+            id: 'l2',
+            bookingId: 'b2',
+            itemId: 'i2',
+            itemName: 'Genset Silent 2200W',
+            qty: 1,
+            unitPricePerDay: 175000,
+            subtotal: 350000,
+          },
+        ],
+      },
+      {
+        id: 'b3',
+        shopSlug: 'borneo-rental',
+        code: 'SBR-261122-CC33',
+        customerName: 'Citra',
+        customerPhone: '628111222555',
+        startDate: '2026-11-22',
+        endDate: '2026-11-22',
+        durationDays: 1,
+        status: 'pending' as const,
+        totalAmount: 120000,
+        notes: '',
+        createdAt: '2026-11-22T08:00:00Z',
+        lines: [],
+      },
+    ];
+
+    const summary = computeShopAnalytics(sampleBookings, null, nowMs);
+    assert.equal(summary.realizedRevenue, 550000);
+    assert.equal(summary.pendingRevenue, 120000);
+    assert.equal(summary.totalBookings, 3);
+    assert.equal(summary.activeOrCompletedCount, 2);
+    assert.equal(summary.averageOrderValue, 275000);
+    assert.equal(summary.topItems.length, 2);
+    assert.equal(summary.topItems[0].itemName, 'Genset Silent 2200W');
+    assert.equal(summary.topItems[0].totalRevenue, 350000);
+  });
+
+  it('buildBookingsCsv menghasilkan format CSV valid dengan header dan baris data', () => {
+    const csv = buildBookingsCsv([
+      {
+        id: 'b1',
+        shopSlug: 'borneo-rental',
+        code: 'SBR-261120-AA11',
+        customerName: 'Andi "Proyek"',
+        customerPhone: '628111222333',
+        startDate: '2026-11-20',
+        endDate: '2026-11-21',
+        durationDays: 2,
+        status: 'confirmed',
+        totalAmount: 200000,
+        notes: 'Catatan, penting',
+        createdAt: '2026-11-20T08:00:00Z',
+      },
+    ]);
+    assert.ok(csv.includes('Kode Booking,Tanggal Buat,Nama Penyewa'));
+    assert.ok(csv.includes('SBR-261120-AA11'));
+    assert.ok(csv.includes('"Andi ""Proyek"""'));
   });
 
   it('P0-3: sanitizeItemForRole menyembunyikan renterNote dari role customer tetapi tetap utuh bagi owner/staff', () => {

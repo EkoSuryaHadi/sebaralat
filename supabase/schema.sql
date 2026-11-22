@@ -1,13 +1,15 @@
 -- =========================================================
--- SKEMA DATABASE SUPABASE: SEBARAJA (GABUNGAN MIGRASI 0001 - 0005)
+-- SKEMA DATABASE SUPABASE: SEBARAJA (GABUNGAN MIGRASI 0001 - 0007)
 -- File ini merangkum seluruh migrasi di folder supabase/migrations/
 -- Untuk data contoh (demo), jalankan supabase/seed.sql secara terpisah.
 -- =========================================================
 
 -- Urutan eksekusi yang disarankan di SQL Editor Supabase:
--- 1. supabase/migrations/0001_init.sql          (Tabel inti, UUID, constraint, tanpa PIN)
--- 2. supabase/migrations/0002_rls.sql           (Row Level Security ketat, proteksi PII renter_note, RPC atomik, trigger audit log)
--- 3. supabase/migrations/0003_storage.sql       (Bucket item-images 1MB, policy per folder toko, publikasi realtime)
--- 4. supabase/migrations/0004_bookings.sql      (Tabel bookings, booking_lines, multiplier server, cek ketersediaan tanggal & anti overbooking)
--- 5. supabase/migrations/0005_subscriptions.sql (Manajemen paket Starter 8 item vs Bisnis PRO & masa aktif langganan)
--- 6. supabase/seed.sql                          (Opsional: data demo pengembangan)
+-- 1. supabase/migrations/0001_init.sql                    (Tabel inti, UUID, constraint, tanpa PIN)
+-- 2. supabase/migrations/0002_rls.sql                     (Row Level Security ketat, proteksi PII renter_note, RPC atomik, trigger audit log)
+-- 3. supabase/migrations/0003_storage.sql                 (Bucket item-images 1MB, policy per folder toko, publikasi realtime)
+-- 4. supabase/migrations/0004_bookings.sql                (Tabel bookings, booking_lines, multiplier server, cek ketersediaan tanggal & anti overbooking)
+-- 5. supabase/migrations/0005_subscriptions.sql           (Manajemen paket Starter 8 item vs Bisnis PRO & masa aktif langganan)
+-- 6. supabase/migrations/0006_phase1_improvements.sql     (Tier diskon durasi kustom milik Owner & fungsi shop_duration_multiplier)
+-- 7. supabase/migrations/0007_phase2_pro_monetization.sql (RPC get_public_booking_by_code dengan PII masking untuk cek status & nota booking publik)
+-- 8. supabase/seed.sql                                    (Opsional: data demo pengembangan)

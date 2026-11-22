@@ -26,9 +26,10 @@ import {
   Radio,
   ShoppingBag,
   BadgeCheck,
+  FileText,
 } from 'lucide-react';
 import { Shop, RentalItem, DurationOption, Role } from '../types';
-import { isProPlanActive } from '../lib/validators';
+import { isProPlanActive, buildGoogleMapsUrl } from '../lib/validators';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface CatalogViewProps {
@@ -41,6 +42,7 @@ interface CatalogViewProps {
   showTerms: boolean;
   setShowTerms: (val: boolean) => void;
   startDate: string;
+  endDate?: string;
   minDate?: string;
   setStartDate: (val: string) => void;
   durationDays: number;
@@ -70,6 +72,8 @@ interface CatalogViewProps {
   onSwitchRole?: (role: Role) => void;
   highlightedItemId?: string | null;
   onClearHighlightedItem?: () => void;
+  onSelectItemDetail?: (item: RentalItem) => void;
+  onOpenBookingLookup?: () => void;
 }
 
 export const CatalogView: React.FC<CatalogViewProps> = ({
@@ -82,6 +86,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   showTerms,
   setShowTerms,
   startDate,
+  endDate,
   minDate,
   setStartDate,
   durationDays,
@@ -107,6 +112,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   onSwitchRole,
   highlightedItemId,
   onClearHighlightedItem,
+  onSelectItemDetail,
+  onOpenBookingLookup,
 }) => {
   const renderItemIcon = (type: string, className = 'w-8 h-8 text-white') => {
     switch (type) {
@@ -226,6 +233,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
+              {onOpenBookingLookup && (
+                <button
+                  type="button"
+                  onClick={onOpenBookingLookup}
+                  className="btn-glass px-2.5 py-2 rounded-xl text-[11px] font-bold text-accent-text flex items-center gap-1"
+                  title="Cek Status Kode Booking & Cetak Nota"
+                >
+                  <FileText className="w-3.5 h-3.5 text-accent-text" />
+                  <span className="hidden sm:inline">Cek Booking</span>
+                </button>
+              )}
               <ThemeToggle />
               <button
                 onClick={onCopyLink}
@@ -242,12 +260,21 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             </div>
           </div>
 
-          {/* Bar Lokasi & Jam Operasional */}
+          {/* Bar Lokasi (Klik Google Maps) & Jam Operasional */}
           <div className="pt-3 border-t border-line flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-            <span className="flex items-center gap-1.5">
+            <a
+              href={buildGoogleMapsUrl(shop.location, shop.mapsUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 hover:text-accent-text transition group"
+              title="Buka lokasi di Google Maps"
+            >
               <MapPin className="w-3.5 h-3.5 text-accent-text shrink-0" />
-              <span>{shop.location}</span>
-            </span>
+              <span className="underline decoration-dotted underline-offset-2 group-hover:decoration-solid">
+                {shop.location}
+              </span>
+              <ExternalLink className="w-3 h-3 text-accent-text opacity-75 shrink-0" />
+            </a>
             <span className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-accent-text shrink-0" />
               <span>{shop.hours}</span>
@@ -283,21 +310,33 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         </div>
       </header>
 
-      {/* KALKULATOR TANGGAL & DURASI SEWA (STICKY GLASS) */}
-      <section aria-label="Jadwal sewa" className="glass sticky top-0 z-30 px-4 py-3 border-b border-line">
-        <div className="flex items-center justify-between mb-1.5">
+      {/* KALKULATOR TANGGAL & DURASI SEWA (STICKY SOLID/FROSTED) */}
+      <section
+        aria-label="Jadwal sewa"
+        className={`bg-surface/95 backdrop-blur-md sticky ${
+          currentRole !== 'customer' ? 'top-11' : 'top-0'
+        } z-30 px-4 py-3 border-b border-line shadow-2xs space-y-2`}
+      >
+        <div className="flex items-center justify-between">
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-muted flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-accent-text" />
             Pilih Jadwal &amp; Durasi Sewa
           </span>
-          {currentDurationObj.discountTag && (
-            <span className="chip bg-accent-soft text-accent-text border-accent/30 font-extrabold text-[10px]">
-              Promo {currentDurationObj.discountTag}
-            </span>
-          )}
+          <div className="flex items-center gap-1.5">
+            {endDate && (
+              <span className="text-[10px] font-semibold text-muted">
+                s/d <strong className="text-fg font-mono">{endDate}</strong>
+              </span>
+            )}
+            {currentDurationObj.discountTag && (
+              <span className="chip bg-accent-soft text-accent-text border-accent/30 font-extrabold text-[10px]">
+                Promo {currentDurationObj.discountTag}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          <div>
+        <div className="grid grid-cols-12 gap-2">
+          <div className="col-span-5">
             <label className="block text-[10px] text-muted font-bold mb-1">
               Tanggal Ambil
             </label>
@@ -306,17 +345,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               min={minDate}
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="field text-xs font-semibold"
+              className="field text-xs font-semibold px-2.5"
             />
           </div>
-          <div>
+          <div className="col-span-4">
             <label className="block text-[10px] text-muted font-bold mb-1">
-              Durasi Paket
+              Paket Durasi
             </label>
             <select
               value={durationDays}
-              onChange={(e) => setDurationDays(Number(e.target.value))}
-              className="field text-xs font-bold text-accent-text border-accent/40 bg-accent-soft/30"
+              onChange={(e) => setDurationDays(Math.max(1, Math.min(60, Number(e.target.value) || 1)))}
+              className="field text-xs font-bold text-accent-text border-accent/40 bg-accent-soft/30 px-2"
             >
               {durationOptions.map((opt) => (
                 <option key={opt.days} value={opt.days} className="bg-surface text-fg">
@@ -324,6 +363,43 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="col-span-3">
+            <label className="block text-[10px] text-muted font-bold mb-1">
+              Hari (1-60)
+            </label>
+            <div className="flex items-center bg-surface-2 border border-line rounded-xl overflow-hidden h-9.5">
+              <button
+                type="button"
+                onClick={() => setDurationDays(Math.max(1, durationDays - 1))}
+                className="w-7 h-full flex items-center justify-center text-fg hover:bg-surface-3 transition cursor-pointer font-bold text-xs"
+                aria-label="Kurangi hari"
+              >
+                -
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={durationDays}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(val)) {
+                    setDurationDays(Math.max(1, Math.min(60, val)));
+                  }
+                }}
+                aria-label="Jumlah hari sewa"
+                className="w-full min-w-0 text-center font-display text-xs font-extrabold bg-transparent text-fg focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                type="button"
+                onClick={() => setDurationDays(Math.min(60, durationDays + 1))}
+                className="w-7 h-full flex items-center justify-center text-accent-text hover:bg-surface-3 transition cursor-pointer font-bold text-xs"
+                aria-label="Tambah hari"
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -415,14 +491,19 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 }`}
               >
                 <div className="p-3.5 sm:p-4 flex gap-3.5">
-                  <div className="w-20 h-24 sm:w-24 sm:h-28 rounded-2xl overflow-hidden shrink-0 relative bg-surface-2 border border-line">
+                  <button
+                    type="button"
+                    onClick={() => onSelectItemDetail?.(item)}
+                    className="w-20 h-24 sm:w-24 sm:h-28 rounded-2xl overflow-hidden shrink-0 relative bg-surface-2 border border-line group cursor-pointer text-left"
+                    title={`Lihat foto & spesifikasi lengkap ${item.name}`}
+                  >
                     {item.imageUrl ? (
                       <>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={item.imageUrl}
                           alt={item.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />
                         <span className="absolute bottom-1 left-1 right-1 text-[9px] text-white font-bold px-1 py-0.5 bg-black/60 backdrop-blur-xs rounded-md text-center truncate">
                           {item.sku || item.category.split('/')[0]}
@@ -430,7 +511,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                       </>
                     ) : (
                       <div
-                        className={`w-full h-full bg-linear-to-br ${item.imageBg} flex flex-col items-center justify-center`}
+                        className={`w-full h-full bg-linear-to-br ${item.imageBg} flex flex-col items-center justify-center group-hover:scale-105 transition-transform`}
                       >
                         {renderItemIcon(item.iconType, 'w-8 h-8 text-white/95')}
                         <span className="text-[9px] text-white/90 font-bold mt-1.5 px-1.5 py-0.5 bg-black/25 rounded-md">
@@ -438,7 +519,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         </span>
                       </div>
                     )}
-                  </div>
+                  </button>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1 mb-1 flex-wrap">
@@ -462,9 +543,15 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                       )}
                     </div>
 
-                    <h2 className="font-display font-extrabold text-sm sm:text-base text-fg leading-snug">
-                      {item.name}
-                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => onSelectItemDetail?.(item)}
+                      className="text-left group cursor-pointer block w-full"
+                    >
+                      <h2 className="font-display font-extrabold text-sm sm:text-base text-fg group-hover:text-accent-text transition leading-snug">
+                        {item.name}
+                      </h2>
+                    </button>
 
                     <ul className="mt-1.5 space-y-0.5">
                       {(item.specs || []).map((spec, idx) => (
@@ -477,6 +564,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         </li>
                       ))}
                     </ul>
+
+                    {onSelectItemDetail && (
+                      <button
+                        type="button"
+                        onClick={() => onSelectItemDetail(item)}
+                        className="mt-1 text-[10px] font-bold text-accent-text hover:underline cursor-pointer"
+                      >
+                        Lihat detail &amp; spesifikasi lengkap &rarr;
+                      </button>
+                    )}
 
                     {isRented && item.availableAt && (
                       <div className="mt-2 bg-danger-soft border border-danger/30 rounded-xl px-2.5 py-1 text-[11px] text-danger-text font-medium flex items-center gap-1.5">
@@ -603,10 +700,10 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   height={28}
                   className="h-5 w-auto object-contain hidden dark:block"
                 />
-                <span className="text-muted">• Powered by SebarAlat</span>
+                <span className="text-muted">• Powered by Sebaraja</span>
               </div>
               <p className="text-[11px] text-muted">
-                Katalog digital &amp; manajemen stok gratis dari SebarAlat
+                Katalog digital &amp; manajemen stok gratis dari Sebaraja
               </p>
             </>
           ) : (

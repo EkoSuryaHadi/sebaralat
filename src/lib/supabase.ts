@@ -7,7 +7,9 @@ import type {
   BookingLine,
   ShopMember,
   ShopInvite,
+  DiscountTier,
 } from '../types/index.ts';
+import { DEFAULT_DISCOUNT_TIERS, normalizeDiscountTiers } from './validators.ts';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -60,6 +62,7 @@ export interface ShopDbRow {
   pro_expires_at?: string | null;
   billing_cycle?: string | null;
   terms?: string[] | null;
+  discount_tiers?: DiscountTier[] | null;
   partner_shop?: { name: string; slug: string } | null;
   logo_url?: string | null;
   created_at?: string;
@@ -169,6 +172,9 @@ export const mapShopFromDb = (row: ShopDbRow): Shop => ({
   proExpiresAt: row.pro_expires_at || null,
   billingCycle: row.billing_cycle === 'yearly' || row.billing_cycle === 'monthly' ? row.billing_cycle : null,
   terms: Array.isArray(row.terms) ? row.terms : [],
+  discountTiers: Array.isArray(row.discount_tiers)
+    ? normalizeDiscountTiers(row.discount_tiers)
+    : DEFAULT_DISCOUNT_TIERS,
   partnerShop: row.partner_shop || undefined,
   logoUrl: row.logo_url || '',
 });
@@ -183,6 +189,7 @@ export const mapShopToDb = (shop: Shop): Omit<ShopDbRow, 'is_verified' | 'plan' 
   hours: shop.hours,
   whatsapp: shop.whatsapp,
   terms: shop.terms || [],
+  discount_tiers: normalizeDiscountTiers(shop.discountTiers),
   partner_shop: shop.partnerShop || null,
   logo_url: shop.logoUrl || '',
 });

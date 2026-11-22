@@ -141,7 +141,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             >
               Berhenti mengirim PDF berat atau membalas chat satu per satu. Buat tautan katalog rental resmi lengkap dengan indikator status{' '}
               <strong className="text-accent-text">🟢 Ready</strong>,{' '}
-              <strong className="text-danger-text">🔴 Disewa</strong>, kalkulator durasi otomatis, dan sistem PIN khusus untuk staf gudang Anda.
+              <strong className="text-danger-text">🔴 Disewa</strong>, kalkulator durasi otomatis, dan akses login khusus untuk staf gudang Anda.
             </p>
 
             <div
@@ -186,7 +186,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* PREVIEW MOCKUP INTERAKTIF DI KANAN HERO */}
           <div className="lg:col-span-5 animate-rise" style={{ animationDelay: '200ms' }}>
-            <div className="glass rounded-[var(--radius-bento)] p-3 sm:p-4 space-y-3 lg:rotate-1">
+            <div className="glass rounded-bento p-3 sm:p-4 space-y-3 lg:rotate-1">
               <div className="flex items-center justify-between gap-2 px-1 pb-1">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-2.5 h-2.5 rounded-full bg-danger shrink-0"></span>
@@ -317,8 +317,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3 md:gap-4">
             {/* Header tile */}
-            <div className="bento md:col-span-4 p-6 sm:p-8 flex flex-col justify-end min-h-[180px] overflow-hidden">
-              <div aria-hidden className="aurora pointer-events-none absolute inset-0 rounded-[var(--radius-bento)] opacity-80" />
+            <div className="bento md:col-span-4 p-6 sm:p-8 flex flex-col justify-end min-h-45 overflow-hidden">
+              <div aria-hidden className="aurora pointer-events-none absolute inset-0 rounded-bento opacity-80" />
               <div className="relative space-y-2">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-accent-text">
                   Arsitektur Kelas Bisnis
@@ -370,7 +370,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <UserCheck className="w-5 h-5" />
                 </div>
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-warn-text">
-                  2. Role Staf Gudang (PIN Khusus)
+                  2. Role Staf Gudang (Akses Terbatas)
                 </span>
               </div>
               <h3 className="font-display text-lg font-extrabold tracking-tight text-fg">
@@ -489,7 +489,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-accent-text shrink-0" />
-                    <span><strong>Akses Multi-Role:</strong> PIN Staf Gudang &amp; PIN Owner terpisah</span>
+                    <span><strong>Akses Multi-Role:</strong> Login Email Magic Link / OTP untuk Staf &amp; Owner</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-accent-text shrink-0" />
@@ -609,7 +609,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               <div className="bg-accent-soft border border-accent/30 rounded-2xl p-3.5 text-xs text-fg flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <span className="font-bold block break-words">
+                  <span className="font-bold block wrap-break-word">
                     {userEmail
                       ? `Terhubung sebagai: ${userEmail}`
                       : 'Akun Owner Terlindungi Supabase Auth'}

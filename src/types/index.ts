@@ -1,8 +1,33 @@
 export type Role = 'customer' | 'staff' | 'owner';
 export type ViewMode = 'saas_home' | 'catalog' | 'workspace';
-export type WorkspaceTab = 'inventory' | 'bookings' | 'logs' | 'settings';
+export type WorkspaceTab = 'inventory' | 'bookings' | 'analytics' | 'logs' | 'settings';
 export type ItemStatus = 'available' | 'rented' | 'maintenance';
 export type BookingStatus = 'pending' | 'confirmed' | 'picked_up' | 'returned' | 'cancelled';
+
+export interface TopItemAnalytics {
+  itemId: string;
+  itemName: string;
+  totalQtyRented: number;
+  bookingCount: number;
+  totalRevenue: number;
+}
+
+export interface ShopAnalyticsSummary {
+  realizedRevenue: number;
+  pendingRevenue: number;
+  totalBookings: number;
+  activeOrCompletedCount: number;
+  pendingCount: number;
+  cancelledCount: number;
+  conversionRate: number;
+  averageOrderValue: number;
+  topItems: TopItemAnalytics[];
+}
+
+export interface DiscountTier {
+  minDays: number;
+  discountPercent: number;
+}
 
 export interface Shop {
   slug: string;
@@ -18,6 +43,7 @@ export interface Shop {
   proExpiresAt?: string | null;
   billingCycle?: 'monthly' | 'yearly' | null;
   terms: string[];
+  discountTiers?: DiscountTier[];
   partnerShop?: {
     name: string;
     slug: string;

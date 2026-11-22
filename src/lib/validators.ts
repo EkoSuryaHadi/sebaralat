@@ -1,11 +1,24 @@
 import { z } from 'zod';
-import type { RentalItem, DurationOption, Booking, Role } from '../types/index.ts';
+import type {
+  RentalItem,
+  DurationOption,
+  Booking,
+  Role,
+  DiscountTier,
+  ShopAnalyticsSummary,
+  TopItemAnalytics,
+} from '../types/index.ts';
 
 // =========================================================
 // UTILITAS SANITASI, KEAMANAN ROLE & PERHITUNGAN MURNI
 // =========================================================
 
 export const DEMO_SHOP_SLUGS = new Set(['borneo-rental', 'kaltim-kamera']);
+
+export const DEFAULT_DISCOUNT_TIERS: DiscountTier[] = [
+  { minDays: 3, discountPercent: 10 },
+  { minDays: 7, discountPercent: 25 },
+];
 
 export function isDemoShopSlug(slug?: string | null): boolean {
   if (!slug) return false;
@@ -49,15 +62,180 @@ export function sanitizeItemForRole(item: RentalItem, role: Role): RentalItem {
 }
 
 /**
- * P0-2: Perhitungan deterministik multiplier tarif sewa berdasarkan durasi hari (identik dengan SQL duration_multiplier).
+ * Normalisasi dan pengurutan tier diskon durasi milik toko.
  */
-export function getDurationMultiplier(durationDays: number): number {
+export function normalizeDiscountTiers(tiers?: DiscountTier[] | null): DiscountTier[] {
+  if (!Array.isArray(tiers)) return [];
+  const byDays = new Map<number, number>();
+  for (const t of tiers) {
+    if (!t || !Number.isFinite(t.minDays) || !Number.isFinite(t.discountPercent)) continue;
+    const minDays = Math.floor(Number(t.minDays));
+    const discountPercent = Math.round(Number(t.discountPercent));
+    if (minDays >= 2 && minDays <= 60 && discountPercent > 0 && discountPercent <= 90) {
+      byDays.set(minDays, discountPercent);
+    }
+  }
+  return Array.from(byDays.entries())
+    .map(([minDays, discountPercent]) => ({ minDays, discountPercent }))
+    .sort((a, b) => a.minDays - b.minDays);
+}
+
+/**
+ * Mengambil persentase diskon yang berlaku untuk jumlah hari sewa berdasarkan tier toko.
+ * Jika discountTiers tidak diberikan (undefined), menggunakan DEFAULT_DISCOUNT_TIERS.
+ * Jika discountTiers berupa array kosong [], maka diskon 0% (tanpa diskon).
+ */
+export function getAppliedDiscountPercent(
+  durationDays: number,
+  discountTiers?: DiscountTier[] | null
+): number {
+  if (!Number.isFinite(durationDays) || durationDays <= 1) return 0;
+  const days = Math.floor(durationDays);
+  const effectiveTiers =
+    discountTiers === undefined
+      ? DEFAULT_DISCOUNT_TIERS
+      : normalizeDiscountTiers(discountTiers);
+
+  let applied = 0;
+  for (const tier of effectiveTiers) {
+    if (tier.minDays <= days) {
+      applied = tier.discountPercent;
+    }
+  }
+  return applied;
+}
+
+/**
+ * P0-2: Perhitungan deterministik multiplier tarif sewa berdasarkan durasi hari dan tier diskon toko.
+ */
+export function getDurationMultiplier(
+  durationDays: number,
+  discountTiers?: DiscountTier[] | null
+): number {
   if (!Number.isFinite(durationDays) || durationDays <= 1) return 1;
   const days = Math.floor(durationDays);
-  if (days === 2) return 2;
-  if (days >= 7) return Number((days * 0.75).toFixed(2));
-  if (days >= 3) return Number((days * 0.9).toFixed(2));
+  const discPercent = getAppliedDiscountPercent(days, discountTiers);
+  if (discPercent > 0) {
+    return Number((days * (1 - discPercent / 100)).toFixed(2));
+  }
   return days;
+}
+
+/**
+ * Membangun daftar opsi paket durasi untuk katalog berdasarkan tier diskon toko + durasi aktif (1-60 hari).
+ */
+export function buildShopDurationOptions(
+  discountTiers?: DiscountTier[] | null,
+  currentDays?: number
+): DurationOption[] {
+  const effectiveTiers =
+    discountTiers === undefined
+      ? DEFAULT_DISCOUNT_TIERS
+      : normalizeDiscountTiers(discountTiers);
+
+  const daySet = new Set<number>([1, 2, 3, 7]);
+  for (const t of effectiveTiers) {
+    daySet.add(t.minDays);
+  }
+  if (
+    typeof currentDays === 'number' &&
+    Number.isFinite(currentDays) &&
+    currentDays >= 1 &&
+    currentDays <= 60
+  ) {
+    daySet.add(Math.floor(currentDays));
+  }
+
+  return Array.from(daySet)
+    .sort((a, b) => a - b)
+    .map((days) => {
+      const disc = getAppliedDiscountPercent(days, effectiveTiers);
+      const multiplier = getDurationMultiplier(days, effectiveTiers);
+      const discountTag = disc > 0 ? `Hemat ${disc}%` : null;
+      let label = `${days} Hari`;
+      if (days === 1) {
+        label = '1 Hari (24 Jam)';
+      } else if (days === 7) {
+        label = disc > 0 ? `1 Minggu (Hemat ${disc}%)` : '1 Minggu (7 Hari)';
+      } else if (disc > 0) {
+        label = `${days} Hari (Hemat ${disc}%)`;
+      }
+      return {
+        days,
+        label,
+        multiplier,
+        discountTag,
+      };
+    });
+}
+
+/**
+ * Membentuk URL Google Maps yang valid dari mapsUrl toko atau fallback ke pencarian lokasi.
+ */
+export function buildGoogleMapsUrl(location: string, mapsUrl?: string | null): string {
+  const cleanUrl = (mapsUrl || '').trim();
+  if (
+    cleanUrl &&
+    /^https?:\/\/.+/i.test(cleanUrl) &&
+    cleanUrl !== 'https://maps.google.com' &&
+    cleanUrl !== 'https://maps.google.com/'
+  ) {
+    return cleanUrl;
+  }
+  const query = encodeURIComponent((location || '').trim() || 'Indonesia');
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+/**
+ * Membentuk pesan WhatsApp follow-up dari Admin/Owner ke Penyewa berdasarkan status booking.
+ */
+export function buildBookingFollowUpWaMessage(booking: Booking, shopName: string): string {
+  const dateRange =
+    booking.endDate && booking.endDate !== booking.startDate
+      ? `${booking.startDate} s/d ${booking.endDate}`
+      : booking.startDate;
+  const itemsText =
+    booking.lines && booking.lines.length > 0
+      ? booking.lines.map((l) => `• ${l.itemName} (${l.qty} unit)`).join('\n') + '\n\n'
+      : '';
+
+  switch (booking.status) {
+    case 'pending':
+      return (
+        `Halo Kak *${booking.customerName}*, kami dari Admin *${shopName}*.\n\n` +
+        `Mengonfirmasi pengajuan booking Anda:\n` +
+        `🔖 *Kode Booking:* ${booking.code}\n` +
+        `📅 *Jadwal:* ${dateRange} (${booking.durationDays} hari)\n` +
+        `💰 *Total Sewa:* ${formatRp(booking.totalAmount)}\n\n` +
+        itemsText +
+        `Unit tersedia untuk jadwal tersebut. Silakan lakukan konfirmasi/DP agar stok langsung kami kunci untuk Anda. Terima kasih!`
+      );
+    case 'confirmed':
+      return (
+        `Halo Kak *${booking.customerName}*, booking Anda di *${shopName}* dengan kode *${booking.code}* sudah *TERKONFIRMASI (Stok Dikunci)* ✅.\n\n` +
+        `📅 *Jadwal Ambil:* ${booking.startDate}\n` +
+        `📅 *Jadwal Kembali:* ${booking.endDate}\n` +
+        `💰 *Total:* ${formatRp(booking.totalAmount)}\n\n` +
+        `Jangan lupa membawa kartu identitas asli (E-KTP) saat pengambilan unit. Sampai jumpa di toko!`
+      );
+    case 'picked_up':
+      return (
+        `Halo Kak *${booking.customerName}*, kami dari *${shopName}* ingin mengingatkan jadwal pengembalian unit sewa:\n\n` +
+        `🔖 *Kode Booking:* ${booking.code}\n` +
+        `📅 *Batas Pengembalian:* ${booking.endDate}\n\n` +
+        itemsText +
+        `Apabila ingin memperpanjang durasi sewa, mohon kabari kami lebih awal ya. Terima kasih!`
+      );
+    case 'returned':
+      return (
+        `Halo Kak *${booking.customerName}*, terima kasih telah menyewa di *${shopName}* (Kode Booking: *${booking.code}*).\n\n` +
+        `Seluruh unit telah kami terima kembali dengan baik. Ditunggu pemesanan berikutnya ya!`
+      );
+    case 'cancelled':
+      return (
+        `Halo Kak *${booking.customerName}*, menginformasikan bahwa booking *${booking.code}* di *${shopName}* untuk jadwal ${dateRange} telah dibatalkan. Hubungi kami jika ingin menjadwalkan ulang. Terima kasih.`
+      );
+  }
 }
 
 export function sanitizeSlug(input: string): string {
@@ -156,12 +334,13 @@ export function calculateCartSummary(
   cart: Record<string, number>,
   items: RentalItem[],
   durationOption: DurationOption,
-  availabilityMap?: Record<string, number>
+  availabilityMap?: Record<string, number>,
+  discountTiers?: DiscountTier[] | null
 ): CalculatedCartSummary {
   const selectedList: (RentalItem & { qty: number; subtotal: number })[] = [];
   let totalUnits = 0;
   let totalCost = 0;
-  const effectiveMultiplier = getDurationMultiplier(durationOption.days);
+  const effectiveMultiplier = getDurationMultiplier(durationOption.days, discountTiers);
 
   Object.entries(cart).forEach(([itemId, qty]) => {
     const item = items.find((i) => i.id === itemId);
@@ -198,6 +377,7 @@ export function buildWhatsappCheckoutMessage(params: {
   durationLabel: string;
   cartSummary: CalculatedCartSummary;
   notes?: string;
+  trackingUrl?: string;
 }): string {
   const {
     shopName,
@@ -208,6 +388,7 @@ export function buildWhatsappCheckoutMessage(params: {
     durationLabel,
     cartSummary,
     notes,
+    trackingUrl,
   } = params;
 
   if (cartSummary.selectedList.length === 0) return '';
@@ -220,6 +401,9 @@ export function buildWhatsappCheckoutMessage(params: {
   const customerLine = customerName?.trim() ? `👤 *Penyewa:* ${customerName.trim()}\n` : '';
   const dateRange = endDate && endDate !== startDate ? `${startDate} s/d ${endDate}` : startDate;
   const noteLine = notes?.trim() ? `\n📝 *Catatan:* ${notes.trim()}\n` : '';
+  const trackingLine = trackingUrl?.trim()
+    ? `🔗 *Cek Status & Nota Booking:* ${trackingUrl.trim()}\n`
+    : '';
 
   return (
     `Halo Admin *${shopName}*, saya ingin menyewa dari katalog resmi:\n\n` +
@@ -229,9 +413,151 @@ export function buildWhatsappCheckoutMessage(params: {
     `⏳ *Durasi Paket:* ${durationLabel}\n\n` +
     `📦 *Rincian Unit:*\n${lines}\n` +
     noteLine +
-    `\n💰 *Total Estimasi:* ${formatRp(cartSummary.totalCost)}\n\n` +
-    `Mohon konfirmasi ketersediaan unit tersebut. Terima kasih.`
+    `\n💰 *Total Estimasi:* ${formatRp(cartSummary.totalCost)}\n` +
+    trackingLine +
+    `\nMohon konfirmasi ketersediaan unit tersebut. Terima kasih.`
   );
+}
+
+/**
+ * Menyamarkan digit tengah nomor telepon pelanggan untuk tampilan cek status booking publik.
+ */
+export function maskCustomerPhone(phone: string): string {
+  const clean = (phone || '').trim();
+  if (clean.includes('****')) return clean;
+  const digits = clean.replace(/[^0-9+]/g, '');
+  if (digits.length > 10) {
+    return `${digits.slice(0, 5)}****${digits.slice(-3)}`;
+  }
+  if (digits.length > 6) {
+    return `${digits.slice(0, 4)}****${digits.slice(-2)}`;
+  }
+  return '****';
+}
+
+/**
+ * Menghitung metrik analitik omzet, konversi, AOV, dan peringkat alat terlaris untuk Tab Omzet Owner PRO.
+ */
+export function computeShopAnalytics(
+  bookings: Booking[],
+  periodDays: number | null = null,
+  nowMs: number = Date.now()
+): ShopAnalyticsSummary {
+  const filtered = bookings.filter((b) => {
+    if (!periodDays || periodDays <= 0) return true;
+    const createdMs = Date.parse(b.createdAt);
+    if (Number.isNaN(createdMs)) return true;
+    return nowMs - createdMs <= periodDays * 86_400_000;
+  });
+
+  let realizedRevenue = 0;
+  let pendingRevenue = 0;
+  let activeOrCompletedCount = 0;
+  let pendingCount = 0;
+  let cancelledCount = 0;
+
+  const itemMap = new Map<string, TopItemAnalytics>();
+
+  for (const bk of filtered) {
+    const amount = Number(bk.totalAmount) || 0;
+    const isRealized =
+      bk.status === 'confirmed' || bk.status === 'picked_up' || bk.status === 'returned';
+
+    if (isRealized) {
+      realizedRevenue += amount;
+      activeOrCompletedCount += 1;
+
+      for (const ln of bk.lines || []) {
+        const key = ln.itemId || ln.itemName;
+        const existing = itemMap.get(key) || {
+          itemId: ln.itemId || key,
+          itemName: ln.itemName,
+          totalQtyRented: 0,
+          bookingCount: 0,
+          totalRevenue: 0,
+        };
+        existing.totalQtyRented += Number(ln.qty) || 0;
+        existing.bookingCount += 1;
+        existing.totalRevenue += Number(ln.subtotal) || 0;
+        itemMap.set(key, existing);
+      }
+    } else if (bk.status === 'pending') {
+      pendingRevenue += amount;
+      pendingCount += 1;
+    } else if (bk.status === 'cancelled') {
+      cancelledCount += 1;
+    }
+  }
+
+  const totalBookings = filtered.length;
+  const conversionRate =
+    totalBookings > 0 ? Math.round((activeOrCompletedCount / totalBookings) * 100) : 0;
+  const averageOrderValue =
+    activeOrCompletedCount > 0 ? Math.round(realizedRevenue / activeOrCompletedCount) : 0;
+
+  const topItems = Array.from(itemMap.values()).sort(
+    (a, b) => b.totalRevenue - a.totalRevenue || b.totalQtyRented - a.totalQtyRented
+  );
+
+  return {
+    realizedRevenue,
+    pendingRevenue,
+    totalBookings,
+    activeOrCompletedCount,
+    pendingCount,
+    cancelledCount,
+    conversionRate,
+    averageOrderValue,
+    topItems,
+  };
+}
+
+/**
+ * Menghasilkan konten file CSV dari daftar booking untuk diunduh Owner PRO.
+ */
+export function buildBookingsCsv(bookings: Booking[]): string {
+  const escapeCsvCell = (val: string | number | null | undefined): string => {
+    const str = String(val ?? '');
+    if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const headers = [
+    'Kode Booking',
+    'Tanggal Buat',
+    'Nama Penyewa',
+    'No WhatsApp',
+    'Tanggal Mulai',
+    'Tanggal Selesai',
+    'Durasi (Hari)',
+    'Status',
+    'Total (Rp)',
+    'Rincian Unit',
+    'Catatan',
+  ];
+
+  const rows = bookings.map((bk) => {
+    const unitSummary = (bk.lines || [])
+      .map((l) => `${l.itemName} x${l.qty}`)
+      .join('; ');
+    return [
+      escapeCsvCell(bk.code),
+      escapeCsvCell(bk.createdAt),
+      escapeCsvCell(bk.customerName),
+      escapeCsvCell(bk.customerPhone),
+      escapeCsvCell(bk.startDate),
+      escapeCsvCell(bk.endDate),
+      escapeCsvCell(bk.durationDays),
+      escapeCsvCell(bk.status.toUpperCase()),
+      escapeCsvCell(bk.totalAmount),
+      escapeCsvCell(unitSummary),
+      escapeCsvCell(bk.notes),
+    ].join(',');
+  });
+
+  return [headers.join(','), ...rows].join('\n');
 }
 
 // =========================================================
@@ -293,6 +619,7 @@ export const NewItemSchema = z.object({
     .max(10_000, 'Stok terlalu besar.'),
   spec1: z.string().trim().max(160).optional().default(''),
   spec2: z.string().trim().max(160).optional().default(''),
+  spec3: z.string().trim().max(160).optional().default(''),
   imageUrl: z
     .string()
     .trim()
@@ -336,12 +663,24 @@ export const InviteMemberSchema = z.object({
   role: z.enum(['owner', 'staff']).default('staff'),
 });
 
+export const DiscountTierSchema = z.object({
+  minDays: z.coerce
+    .number()
+    .int('Minimal hari harus bilangan bulat.')
+    .min(2, 'Tier diskon minimal mulai dari 2 hari.')
+    .max(60, 'Maksimal durasi sewa adalah 60 hari.'),
+  discountPercent: z.coerce
+    .number()
+    .min(0, 'Persentase diskon minimal 0%.')
+    .max(90, 'Persentase diskon maksimal 90%.'),
+});
+
 // =========================================================
 // ATURAN PAKET: STARTER VS BISNIS PRO
 // =========================================================
 
 export const STARTER_MAX_ITEMS = 8;
-export const SEBARALA_ADMIN_WA = '6281911821355'; // Hotline WhatsApp Resmi SebarAlat
+export const SEBARALA_ADMIN_WA = '6281911821355'; // Hotline WhatsApp Resmi Sebaraja
 
 /**
  * Cek apakah paket Bisnis PRO aktif dan belum melewati masa berlaku
@@ -378,12 +717,12 @@ export function formatUpgradeWhatsappMessage(
 ): string {
   const packageName = cycle === 'yearly' ? 'Bisnis PRO Tahunan (Rp 149.000 / thn)' : 'Bisnis PRO Bulanan (Rp 23.000 / bln)';
   return (
-    `Halo Tim SebarAlat! 👋\n\n` +
+    `Halo Tim Sebaraja! 👋\n\n` +
     `Saya ingin mengajukan upgrade ke paket *${packageName}* untuk toko rental saya:\n\n` +
     `🏪 *Nama Toko:* ${shop.name}\n` +
     `🔗 *Link Katalog:* sebaraja.com/${shop.slug}\n` +
     `📅 *Siklus Langganan:* ${cycle === 'yearly' ? 'Tahunan (Hemat 46%)' : 'Bulanan'}\n\n` +
-    `Mohon info rekening atau QRIS resmi SebarAlat untuk aktivasi toko saya. Terima kasih!`
+    `Mohon info rekening atau QRIS resmi Sebaraja untuk aktivasi toko saya. Terima kasih!`
   );
 }
 

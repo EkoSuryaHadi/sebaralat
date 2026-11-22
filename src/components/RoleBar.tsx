@@ -30,8 +30,8 @@ export const RoleBar: React.FC<RoleBarProps> = ({
   const isDemoShop = shopSlug === 'borneo-rental' || shopSlug === 'kaltim-kamera';
 
   return (
-    <aside aria-label="Role bar" className="sticky top-0 z-40 glass border-b border-line px-3 py-2 text-fg">
-      <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
+    <aside aria-label="Role bar" className="sticky top-0 z-40 h-11 bg-surface/95 backdrop-blur-md border-b border-line px-3 flex items-center text-fg shadow-2xs">
+      <div className="w-full max-w-5xl mx-auto flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span
             className={`inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
