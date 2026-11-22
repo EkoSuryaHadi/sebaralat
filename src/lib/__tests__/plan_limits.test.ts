@@ -50,7 +50,7 @@ describe('Aturan & Pembatasan Paket Starter vs Bisnis PRO', () => {
     const shop = { slug: 'toko-outdoor', name: 'Toko Outdoor Balikpapan' };
     const msg = formatUpgradeWhatsappMessage(shop, 'yearly');
     assert.match(msg, /Toko Outdoor Balikpapan/);
-    assert.match(msg, /sebaraja\.com\/toko-outdoor/);
+    assert.match(msg, /sebaraja\.my\.id\/toko-outdoor/);
     assert.match(msg, /Bisnis PRO Tahunan/);
   });
 

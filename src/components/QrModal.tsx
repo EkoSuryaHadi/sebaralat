@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Printer, Copy, Check, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RentalItem, Shop } from '../types';
+import { getPublicSiteOrigin } from '../lib/validators';
 
 interface QrModalProps {
   isOpen: boolean;
@@ -24,11 +25,9 @@ export const QrModal: React.FC<QrModalProps> = ({
 
   if (!isOpen) return null;
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = getPublicSiteOrigin();
 
-  const targetUrl = baseUrl
-    ? `${baseUrl}/${shop.slug}${selectedQrItem ? `?item=${selectedQrItem.id}` : ''}`
-    : `https://sebaraja.com/${shop.slug}${selectedQrItem ? `?item=${selectedQrItem.id}` : ''}`;
+  const targetUrl = `${baseUrl}/${shop.slug}${selectedQrItem ? `?item=${selectedQrItem.id}` : ''}`;
 
   const handleCopyLink = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {

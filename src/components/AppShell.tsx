@@ -19,6 +19,7 @@ import {
   calculateCartSummary,
   buildWhatsappCheckoutMessage,
   buildShopDurationOptions,
+  getPublicSiteOrigin,
   NewShopSchema,
   NewItemSchema,
   CreateBookingSchema,
@@ -399,8 +400,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       selectedBundles: cartSummary.selectedBundles,
     });
 
-    const origin =
-      typeof window !== 'undefined' ? window.location.origin : 'https://sebaraja.com';
+    const origin = getPublicSiteOrigin();
     const trackingUrl = `${origin}/${shop.slug}?booking=${encodeURIComponent(booking.code)}`;
 
     const msgWithCode = buildWhatsappCheckoutMessage({
@@ -684,8 +684,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
 
   const handleCopyLink = () => {
     if (!shop) return;
-    const origin =
-      typeof window !== 'undefined' ? window.location.origin : 'https://sebaraja.com';
+    const origin = getPublicSiteOrigin();
     copyToClipboard(`${origin}/${shop.slug}`, 'Tautan katalog resmi berhasil disalin!');
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);

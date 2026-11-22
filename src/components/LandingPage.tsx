@@ -193,7 +193,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="w-2.5 h-2.5 rounded-full bg-warn shrink-0"></span>
                   <span className="w-2.5 h-2.5 rounded-full bg-accent shrink-0"></span>
                   <span className="text-[11px] font-mono text-muted ml-2 truncate">
-                    sebaraja.com/borneo-rental
+                    sebaraja.my.id/borneo-rental
                   </span>
                 </div>
                 <span className="chip bg-accent-soft border-accent/30 text-accent-text text-[10px] shrink-0">
@@ -359,7 +359,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </p>
               <div className="mt-auto pt-3 flex items-center gap-2 text-[11px] font-mono text-muted">
                 <span className="w-2 h-2 rounded-full bg-accent"></span>
-                <span className="truncate">sebaraja.com/borneo-rental</span>
+                <span className="truncate">sebaraja.my.id/borneo-rental</span>
               </div>
             </div>
 
@@ -562,7 +562,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   Tautan Katalog Resmi (Slug URL)
                 </label>
                 <div className="field flex items-center gap-0.5 bg-surface-2 focus-within:border-accent focus-within:shadow-[0_0_0_4px_var(--accent-soft)]">
-                  <span className="text-xs text-subtle font-mono shrink-0">sebaraja.com/</span>
+                  <span className="text-xs text-subtle font-mono shrink-0">sebaraja.my.id/</span>
                   <input
                     type="text"
                     required

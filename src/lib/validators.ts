@@ -22,6 +22,27 @@ export const DEFAULT_DISCOUNT_TIERS: DiscountTier[] = [
   { minDays: 7, discountPercent: 25 },
 ];
 
+export const PUBLIC_SITE_URL = 'https://sebaraja.my.id';
+
+/**
+ * Mengembalikan origin domain publik untuk tautan katalog, QR, dan pelacakan booking.
+ * Menghindari kebocoran URL preview *.vercel.app jika NEXT_PUBLIC_SITE_URL belum diatur.
+ */
+export function getPublicSiteOrigin(): string {
+  const envUrl =
+    typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SITE_URL?.trim() : '';
+  if (envUrl && /^https?:\/\/.+/i.test(envUrl)) {
+    return envUrl.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    if (window.location.hostname.endsWith('.vercel.app')) {
+      return PUBLIC_SITE_URL;
+    }
+    return window.location.origin;
+  }
+  return PUBLIC_SITE_URL;
+}
+
 export function isDemoShopSlug(slug?: string | null): boolean {
   if (!slug) return false;
   return DEMO_SHOP_SLUGS.has(slug.trim().toLowerCase());
@@ -790,7 +811,7 @@ export function formatUpgradeWhatsappMessage(
     `Halo Tim Sebaraja! 👋\n\n` +
     `Saya ingin mengajukan upgrade ke paket *${packageName}* untuk toko rental saya:\n\n` +
     `🏪 *Nama Toko:* ${shop.name}\n` +
-    `🔗 *Link Katalog:* sebaraja.com/${shop.slug}\n` +
+    `🔗 *Link Katalog:* sebaraja.my.id/${shop.slug}\n` +
     `📅 *Siklus Langganan:* ${cycle === 'yearly' ? 'Tahunan (Hemat 46%)' : 'Bulanan'}\n\n` +
     `Mohon info rekening atau QRIS resmi Sebaraja untuk aktivasi toko saya. Terima kasih!`
   );

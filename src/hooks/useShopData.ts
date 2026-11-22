@@ -608,10 +608,8 @@ export function useShopData(params: {
     const endDate = addDaysToIsoDate(startDate, durationDays);
     const pickupTime = params.pickupTime || '09:00';
     const deliveryMode: DeliveryMode = params.deliveryMode === 'delivery' ? 'delivery' : 'pickup';
-    const isLocalDemoFallback =
-      !supabase || (isDemoShopSlug(activeShopSlug) && !cloudShopSlugs.has(activeShopSlug));
 
-    if (isLocalDemoFallback) {
+    if (!supabase || (isDemoShopSlug(activeShopSlug) && !cloudShopSlugs.has(activeShopSlug))) {
       const code = `SBR-${startDate.replace(/-/g, '').slice(2)}-${Math.random()
         .toString(36)
         .substring(2, 6)
@@ -722,10 +720,8 @@ export function useShopData(params: {
     const startIso = startDate || new Date().toISOString().slice(0, 10);
     const endIso = addDaysToIsoDate(startIso, params.durationDays);
     const mult = getDurationMultiplier(params.durationDays, shop?.discountTiers);
-    const isLocalDemoFallback =
-      !supabase || (isDemoShopSlug(activeShopSlug) && !cloudShopSlugs.has(activeShopSlug));
 
-    if (isLocalDemoFallback) {
+    if (!supabase || (isDemoShopSlug(activeShopSlug) && !cloudShopSlugs.has(activeShopSlug))) {
       const code = `SBR-${startIso.replace(/-/g, '').slice(2)}-${Math.random()
         .toString(36)
         .substring(2, 6)

@@ -17,6 +17,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { Booking, Shop } from '../types';
+import { getPublicSiteOrigin } from '../lib/validators';
 
 interface BookingStatusModalProps {
   isOpen: boolean;
@@ -105,8 +106,7 @@ export const BookingStatusModal: React.FC<BookingStatusModalProps> = ({
   };
 
   const getTicketUrl = (code: string) => {
-    const origin =
-      typeof window !== 'undefined' ? window.location.origin : 'https://sebaraja.com';
+    const origin = getPublicSiteOrigin();
     return `${origin}/${shop.slug}?booking=${encodeURIComponent(code)}`;
   };
 

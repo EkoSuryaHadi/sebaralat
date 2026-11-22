@@ -131,7 +131,7 @@ export function formatWitaTimestamp(isoOrDate?: string | Date): string {
 }
 
 function normalizeOrigin(origin?: string): string {
-  if (!origin) return 'https://sebaraja.com';
+  if (!origin || origin.includes('.vercel.app')) return 'https://sebaraja.my.id';
   return origin.replace(/\/+$/, '');
 }
 
