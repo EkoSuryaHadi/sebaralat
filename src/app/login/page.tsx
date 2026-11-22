@@ -29,6 +29,7 @@ function LoginFormContent() {
 
   const redirectParam = searchParams.get('redirect') || '';
   const shopParam = searchParams.get('shop') || '';
+  const isAdminRedirect = redirectParam === '/admin' || redirectParam.startsWith('/admin?');
 
   const {
     user,
@@ -140,9 +141,14 @@ function LoginFormContent() {
     router.push(`/${safeDemoSlug}?view=workspace`);
   };
 
-  // Tampilan transisi loading jika sedang dialihkan ke toko
-  if (isRedirecting || (user && memberships.length > 0)) {
+  // Tampilan transisi loading jika sedang dialihkan ke tujuan
+  if (isRedirecting || (user && (memberships.length > 0 || isAdminRedirect))) {
     const targetShop = shopParam || (memberships.length > 0 ? memberships[0].shopSlug : '');
+    const fallbackTarget = isAdminRedirect
+      ? redirectParam || '/admin'
+      : targetShop
+        ? `/${targetShop}?view=workspace`
+        : '/';
     return (
       <div className="w-full max-w-md mx-auto animate-rise">
         <div className="glass-strong rounded-bento p-8 text-center space-y-4">
@@ -152,14 +158,22 @@ function LoginFormContent() {
           <div>
             <h2 className="font-display text-xl font-extrabold tracking-tight text-fg">Login Berhasil!</h2>
             <p className="text-xs text-muted mt-1 leading-relaxed">
-              Sedang mengalihkan Anda langsung ke Panel Toko{' '}
-              {targetShop && <strong className="text-accent-text font-mono">/{targetShop}</strong>}...
+              {isAdminRedirect ? (
+                <>
+                  Sedang mengalihkan Anda ke <strong className="text-accent-text font-mono">Super Admin Analytics (/admin)</strong>...
+                </>
+              ) : (
+                <>
+                  Sedang mengalihkan Anda langsung ke Panel Toko{' '}
+                  {targetShop && <strong className="text-accent-text font-mono">/{targetShop}</strong>}...
+                </>
+              )}
             </p>
           </div>
           <p className="text-[11px] text-subtle">
             Jika halaman tidak berpindah otomatis dalam beberapa detik,{' '}
             <button
-              onClick={() => handleProceed(targetShop ? `/${targetShop}?view=workspace` : '/')}
+              onClick={() => handleProceed(fallbackTarget)}
               className="text-accent-text underline font-bold cursor-pointer"
             >
               klik di sini
@@ -181,13 +195,15 @@ function LoginFormContent() {
         {/* HEADER FORM */}
         <div className="relative space-y-2 mb-6">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft border border-accent/30 text-accent-text mb-2">
-            <Lock className="w-6 h-6" />
+            {isAdminRedirect ? <ShieldCheck className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
           </div>
           <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">
-            Portal Pengelola Toko
+            {isAdminRedirect ? 'Portal Super Admin' : 'Portal Pengelola Toko'}
           </h1>
           <p className="text-xs text-muted max-w-xs leading-relaxed">
-            Masuk untuk mengelola katalog, inventaris barang, ketersediaan unit, dan order sewa.
+            {isAdminRedirect
+              ? 'Masuk dengan akun email Super Admin Sebaraja untuk mengakses analitik seluruh platform.'
+              : 'Masuk untuk mengelola katalog, inventaris barang, ketersediaan unit, dan order sewa.'}
           </p>
         </div>
 
@@ -272,7 +288,7 @@ function LoginFormContent() {
                       type="email"
                       required
                       autoFocus
-                      placeholder="owner@tokorental.com"
+                      placeholder={isAdminRedirect ? 'admin@sebaraja.my.id' : 'owner@tokorental.com'}
                       value={emailInput}
                       onChange={(e) => setEmailInput(e.target.value)}
                       className="field pl-10!"
@@ -396,8 +412,8 @@ function LoginFormContent() {
               </div>
             )}
 
-            {/* MODE SIMULATOR DEMO (HANYA UNTUK TOKO DEMO SHOWCASE ATAU TANPA SUPABASE) */}
-            {(!isSupabaseConfigured || !shopParam || isDemoShopSlug(shopParam)) && (
+            {/* MODE SIMULATOR DEMO (HANYA UNTUK TOKO DEMO SHOWCASE ATAU TANPA SUPABASE, BUKAN SUPER ADMIN) */}
+            {!isAdminRedirect && (!isSupabaseConfigured || !shopParam || isDemoShopSlug(shopParam)) && (
               <div className="pt-4 border-t border-line space-y-2.5">
                 <div className="flex items-center justify-between gap-2 text-[11px]">
                   <span className="text-muted font-semibold">
@@ -432,14 +448,16 @@ function LoginFormContent() {
       </div>
 
       {/* FOOTER INFORMASI & BANTUAN */}
-      <div className="text-center mt-6 space-y-2">
-        <p className="text-[11px] text-muted">
-          Belum punya katalog usaha rental?{' '}
-          <Link href="/#daftar-toko" className="text-accent-text hover:underline font-bold">
-            Buat Katalog Gratis di Sini
-          </Link>
-        </p>
-      </div>
+      {!isAdminRedirect && (
+        <div className="text-center mt-6 space-y-2">
+          <p className="text-[11px] text-muted">
+            Belum punya katalog usaha rental?{' '}
+            <Link href="/#daftar-toko" className="text-accent-text hover:underline font-bold">
+              Buat Katalog Gratis di Sini
+            </Link>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
