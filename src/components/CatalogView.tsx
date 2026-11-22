@@ -27,9 +27,10 @@ import {
   ShoppingBag,
   BadgeCheck,
   FileText,
+  Package,
 } from 'lucide-react';
-import { Shop, RentalItem, DurationOption, Role } from '../types';
-import { isProPlanActive, buildGoogleMapsUrl } from '../lib/validators';
+import { Shop, RentalItem, DurationOption, Role, RentalBundle } from '../types';
+import { isProPlanActive, buildGoogleMapsUrl, computeBundleAvailability } from '../lib/validators';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface CatalogViewProps {
@@ -57,9 +58,12 @@ interface CatalogViewProps {
   categories: string[];
   cart: Record<string, number>;
   onUpdateCartQty: (itemId: string, delta: number, maxStock: number) => void;
+  bundleCart?: Record<string, number>;
+  onUpdateBundleCartQty?: (bundleId: string, delta: number, maxAvail: number) => void;
   onOpenWhatsApp: (customText?: string) => void;
   cartSummary: {
     selectedList: (RentalItem & { qty: number; subtotal: number })[];
+    selectedBundles?: (RentalBundle & { qty: number; subtotal: number })[];
     totalUnits: number;
     totalCost: number;
   };
@@ -101,6 +105,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   categories,
   cart,
   onUpdateCartQty,
+  bundleCart = {},
+  onUpdateBundleCartQty,
   onOpenWhatsApp,
   cartSummary,
   onOpenCheckoutModal,
@@ -436,6 +442,119 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
       {/* DAFTAR ITEM KATALOG (BENTO CARDS) */}
       <main aria-label="Daftar unit katalog" className="px-4 space-y-3">
+        {/* PAKET BUNDLING HEMAT */}
+        {shop.bundles && shop.bundles.length > 0 && onUpdateBundleCartQty && (
+          <section aria-label="Paket bundling hemat" className="space-y-2.5 pb-1">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-accent-text flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5" />
+                <span>Paket Bundling Hemat ({shop.bundles.length})</span>
+              </span>
+              <span className="text-[10px] text-muted font-semibold">Stok sinkron otomatis</span>
+            </div>
+
+            {shop.bundles.map((bnd) => {
+              const availCount = computeBundleAvailability(bnd, items, availabilityMap);
+              const inBundleQty = bundleCart[bnd.id] || 0;
+              const bundlePrice = Math.round(bnd.pricePerDay * currentDurationObj.multiplier);
+              return (
+                <div
+                  key={bnd.id}
+                  className={`bento p-3.5 sm:p-4 bg-accent-soft/30 border transition-all ${
+                    inBundleQty > 0 ? 'border-accent ring-1 ring-accent' : 'border-accent/30'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="chip bg-accent text-accent-fg text-[9px] font-extrabold uppercase py-0.5">
+                          🎁 Paket Bundling
+                        </span>
+                        {availCount > 0 ? (
+                          <span className="chip bg-surface text-accent-text border-accent/30 text-[10px] py-0.5">
+                            Tersedia ({availCount} paket)
+                          </span>
+                        ) : (
+                          <span className="chip bg-danger-soft text-danger-text border-danger/30 text-[10px] py-0.5">
+                            Komponen Habis
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-display text-sm sm:text-base font-extrabold text-fg">
+                        {bnd.name}
+                      </h3>
+                      {bnd.description && (
+                        <p className="text-[11px] text-muted">{bnd.description}</p>
+                      )}
+                      <div className="flex flex-wrap gap-1 pt-0.5">
+                        {bnd.lines.map((ln, idx) => {
+                          const comp = items.find((i) => i.id === ln.itemId);
+                          return (
+                            <span
+                              key={`${bnd.id}-${idx}`}
+                              className="text-[10px] bg-surface border border-line rounded-lg px-2 py-0.5 text-fg-soft font-medium"
+                            >
+                              {ln.qty}× {comp ? comp.name : 'Unit'}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-accent/20 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-display text-base font-extrabold text-fg">
+                        {formatRp(bundlePrice)}
+                      </span>
+                      <span className="text-[11px] text-muted font-medium">
+                        {' '}/ {durationDays} Hari
+                      </span>
+                    </div>
+
+                    {availCount > 0 ? (
+                      inBundleQty === 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => onUpdateBundleCartQty(bnd.id, 1, availCount)}
+                          className="btn-brutal px-3.5 py-2 text-xs"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Pilih Paket</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2 bg-surface border border-accent rounded-xl p-1 shadow-xs">
+                          <button
+                            type="button"
+                            onClick={() => onUpdateBundleCartQty(bnd.id, -1, availCount)}
+                            className="w-7 h-7 rounded-lg bg-surface-2 text-fg hover:bg-surface-3 flex items-center justify-center cursor-pointer"
+                            aria-label="Kurangi paket"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="font-display text-xs font-extrabold text-accent-text px-1">
+                            {inBundleQty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => onUpdateBundleCartQty(bnd.id, 1, availCount)}
+                            className="w-7 h-7 rounded-lg bg-accent text-accent-fg flex items-center justify-center cursor-pointer font-bold"
+                            aria-label="Tambah paket"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )
+                    ) : (
+                      <span className="text-[11px] font-bold text-danger-text">Stok Kosong</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
+
         {highlightedItem && (
           <div className="bento bg-accent-soft border-accent/40 p-3.5 flex items-center justify-between gap-2 shadow-md">
             <div className="min-w-0">

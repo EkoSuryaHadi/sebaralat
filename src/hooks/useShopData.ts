@@ -29,6 +29,9 @@ import {
   ShopMember,
   Role,
   ItemStatus,
+  DeliveryMode,
+  PaymentStatus,
+  RentalBundle,
 } from '@/types';
 import { DEFAULT_SHOPS, DEFAULT_ITEMS, DEFAULT_BOOKINGS } from '@/data/mockData';
 import { triggerTelegramClientAlert } from '@/lib/telegram';
@@ -92,7 +95,7 @@ export function useShopData(params: {
         client
           .from('shops')
           .select(
-            'slug, name, tagline, category_type, location, maps_url, hours, whatsapp, is_verified, plan, pro_expires_at, billing_cycle, terms, discount_tiers, partner_shop, logo_url'
+            'slug, name, tagline, category_type, location, maps_url, hours, whatsapp, is_verified, plan, pro_expires_at, billing_cycle, terms, discount_tiers, qris_url, bundles, partner_shop, logo_url'
           )
           .limit(50),
         client
@@ -197,7 +200,7 @@ export function useShopData(params: {
   // 2. Fetch data internal (log, booking, undangan, anggota tim, serta kolom internal renter_note) hanya bila user punya role pengelola
   const fetchWorkspaceData = useCallback(async () => {
     if (!supabase || currentRole === 'customer') return;
-    const [logsRes, bookingsRes, invitesRes, membersRes, internalItemsRes] = await Promise.all([
+    const [logsRes, bookingsRes, invitesRes, membersRes, internalItemsRes, ownerShopRes] = await Promise.all([
       supabase
         .from('activity_logs')
         .select('id, shop_slug, actor_role, action, created_at')
@@ -207,7 +210,7 @@ export function useShopData(params: {
       supabase
         .from('bookings')
         .select(
-          'id, shop_slug, code, customer_name, customer_phone, start_date, end_date, duration_days, status, total_amount, notes, created_at, booking_lines(id, booking_id, item_id, item_name, qty, unit_price_per_day, subtotal)'
+          'id, shop_slug, code, customer_name, customer_phone, start_date, end_date, duration_days, status, total_amount, notes, pickup_time, delivery_mode, payment_status, dp_amount, collateral, source, created_at, booking_lines(id, booking_id, item_id, item_name, qty, unit_price_per_day, subtotal)'
         )
         .eq('shop_slug', activeShopSlug)
         .order('created_at', { ascending: false })
@@ -231,6 +234,13 @@ export function useShopData(params: {
         .select('id, renter_note, last_updated_by')
         .eq('shop_slug', activeShopSlug)
         .limit(200),
+      currentRole === 'owner'
+        ? supabase
+            .from('shops')
+            .select('notify_telegram_chat_id')
+            .eq('slug', activeShopSlug)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
     if (!logsRes.error && logsRes.data) {
@@ -250,6 +260,17 @@ export function useShopData(params: {
     }
     if (!membersRes.error && membersRes.data) {
       setMembers((membersRes.data as ShopMemberDbRow[]).map(mapMemberFromDb));
+    }
+    if (!ownerShopRes.error && ownerShopRes.data) {
+      const chatId = (ownerShopRes.data as { notify_telegram_chat_id?: string | null })
+        .notify_telegram_chat_id;
+      if (typeof chatId === 'string') {
+        setShops((prev) =>
+          prev.map((s) =>
+            s.slug === activeShopSlug ? { ...s, notifyTelegramChatId: chatId } : s
+          )
+        );
+      }
     }
     if (!internalItemsRes.error && internalItemsRes.data) {
       const notesMap = new Map(
@@ -575,10 +596,15 @@ export function useShopData(params: {
     customerName: string;
     customerPhone: string;
     notes: string;
+    pickupTime?: string;
+    deliveryMode?: DeliveryMode;
     multiplier: number;
     selectedList: (RentalItem & { qty: number; subtotal: number })[];
+    selectedBundles?: (RentalBundle & { qty: number; subtotal: number })[];
   }): Promise<Booking> => {
     const endDate = addDaysToIsoDate(startDate, durationDays);
+    const pickupTime = params.pickupTime || '09:00';
+    const deliveryMode: DeliveryMode = params.deliveryMode === 'delivery' ? 'delivery' : 'pickup';
 
     if (!supabase) {
       const code = `SBR-${startDate.replace(/-/g, '').slice(2)}-${Math.random()
@@ -589,7 +615,27 @@ export function useShopData(params: {
         typeof crypto !== 'undefined' && crypto.randomUUID
           ? crypto.randomUUID()
           : `bk-${Date.now()}`;
-      const totalAmount = params.selectedList.reduce((s, it) => s + it.subtotal, 0);
+      const itemsTotal = params.selectedList.reduce((s, it) => s + it.subtotal, 0);
+      const bundlesTotal = (params.selectedBundles || []).reduce((s, b) => s + b.subtotal, 0);
+      const totalAmount = itemsTotal + bundlesTotal;
+      const itemLines = params.selectedList.map((it, idx) => ({
+        id: `${bookingId}-${idx}`,
+        bookingId,
+        itemId: it.id,
+        itemName: it.name,
+        qty: it.qty,
+        unitPricePerDay: it.pricePerDay,
+        subtotal: it.subtotal,
+      }));
+      const bundleLines = (params.selectedBundles || []).map((b, idx) => ({
+        id: `${bookingId}-bnd-${idx}`,
+        bookingId,
+        itemId: b.lines[0]?.itemId || b.id,
+        itemName: `Paket ${b.name}`,
+        qty: b.qty,
+        unitPricePerDay: b.pricePerDay,
+        subtotal: b.subtotal,
+      }));
       const localBooking: Booking = {
         id: bookingId,
         shopSlug: activeShopSlug,
@@ -602,16 +648,14 @@ export function useShopData(params: {
         status: 'pending',
         totalAmount,
         notes: params.notes,
+        pickupTime,
+        deliveryMode,
+        paymentStatus: 'unpaid',
+        dpAmount: 0,
+        collateral: '',
+        source: 'catalog',
         createdAt: new Date().toISOString(),
-        lines: params.selectedList.map((it, idx) => ({
-          id: `${bookingId}-${idx}`,
-          bookingId,
-          itemId: it.id,
-          itemName: it.name,
-          qty: it.qty,
-          unitPricePerDay: it.pricePerDay,
-          subtotal: it.subtotal,
-        })),
+        lines: [...itemLines, ...bundleLines],
       };
       setBookings((prev) => [localBooking, ...prev]);
       appendLocalAuditLog(
@@ -625,6 +669,10 @@ export function useShopData(params: {
       item_id: it.id,
       qty: it.qty,
     }));
+    const bundlesPayload = (params.selectedBundles || []).map((b) => ({
+      bundle_id: b.id,
+      qty: b.qty,
+    }));
 
     const { data, error } = await supabase.rpc('create_booking', {
       p_shop_slug: activeShopSlug,
@@ -635,6 +683,9 @@ export function useShopData(params: {
       p_multiplier: safeMultiplier,
       p_lines: linesPayload,
       p_notes: params.notes,
+      p_pickup_time: pickupTime,
+      p_delivery_mode: deliveryMode,
+      p_bundles: bundlesPayload,
     });
 
     if (error || !data) {
@@ -643,7 +694,202 @@ export function useShopData(params: {
 
     const created = mapBookingFromDb(data as BookingDbRow);
     setBookings((prev) => [created, ...prev]);
+
+    void triggerTelegramClientAlert({
+      event: 'booking_created',
+      shopSlug: activeShopSlug,
+      bookingCode: created.code,
+    });
+
     return created;
+  };
+
+  const createWalkInBooking = async (params: {
+    customerName: string;
+    customerPhone: string;
+    durationDays: number;
+    selectedItems: { item: RentalItem; qty: number }[];
+    paymentStatus: PaymentStatus;
+    dpAmount: number;
+    collateral: string;
+    notes: string;
+  }): Promise<Booking> => {
+    const startIso = startDate || new Date().toISOString().slice(0, 10);
+    const endIso = addDaysToIsoDate(startIso, params.durationDays);
+    const mult = getDurationMultiplier(params.durationDays, shop?.discountTiers);
+
+    if (!supabase) {
+      const code = `SBR-${startIso.replace(/-/g, '').slice(2)}-${Math.random()
+        .toString(36)
+        .substring(2, 6)
+        .toUpperCase()}`;
+      const bookingId =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `wk-${Date.now()}`;
+      const lines = params.selectedItems.map(({ item, qty }, idx) => ({
+        id: `${bookingId}-${idx}`,
+        bookingId,
+        itemId: item.id,
+        itemName: item.name,
+        qty,
+        unitPricePerDay: item.pricePerDay,
+        subtotal: Math.round(item.pricePerDay * mult * qty),
+      }));
+      const totalAmount = lines.reduce((s, l) => s + l.subtotal, 0);
+      const finalDp =
+        params.paymentStatus === 'paid'
+          ? totalAmount
+          : params.paymentStatus === 'unpaid'
+          ? 0
+          : Math.min(totalAmount, Math.max(0, params.dpAmount));
+
+      const localWalkin: Booking = {
+        id: bookingId,
+        shopSlug: activeShopSlug,
+        code,
+        customerName: params.customerName,
+        customerPhone: params.customerPhone,
+        startDate: startIso,
+        endDate: endIso,
+        durationDays: params.durationDays,
+        status: 'picked_up',
+        totalAmount,
+        notes: params.notes,
+        pickupTime: new Date().toTimeString().slice(0, 5),
+        deliveryMode: 'pickup',
+        paymentStatus: params.paymentStatus,
+        dpAmount: finalDp,
+        collateral: params.collateral,
+        source: 'walkin',
+        createdAt: new Date().toISOString(),
+        lines,
+      };
+      setBookings((prev) => [localWalkin, ...prev]);
+      appendLocalAuditLog(
+        `Mencatat sewa walk-in ${code} (${params.customerName}) senilai Rp${totalAmount.toLocaleString('id-ID')}`
+      );
+      triggerToast(`Sewa Walk-in ${code} tercatat!`);
+      return localWalkin;
+    }
+
+    const { data, error } = await supabase.rpc('create_walkin_booking', {
+      p_shop_slug: activeShopSlug,
+      p_customer_name: params.customerName,
+      p_customer_phone: params.customerPhone,
+      p_duration_days: params.durationDays,
+      p_lines: params.selectedItems.map(({ item, qty }) => ({
+        item_id: item.id,
+        qty,
+      })),
+      p_payment_status: params.paymentStatus,
+      p_dp_amount: params.dpAmount,
+      p_collateral: params.collateral,
+      p_notes: params.notes,
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message || 'Gagal mencatat sewa walk-in.');
+    }
+
+    const created = mapBookingFromDb(data as BookingDbRow);
+    setBookings((prev) => [created, ...prev]);
+    triggerToast(`Sewa Walk-in ${created.code} berhasil dicatat!`);
+    return created;
+  };
+
+  const updateBookingHandover = async (params: {
+    bookingId: string;
+    paymentStatus: PaymentStatus;
+    dpAmount: number;
+    collateral: string;
+  }) => {
+    const prevBookings = bookings;
+    setBookings((prev) =>
+      prev.map((b) => {
+        if (b.id !== params.bookingId) return b;
+        const resolvedDp =
+          params.paymentStatus === 'paid'
+            ? b.totalAmount
+            : params.paymentStatus === 'unpaid'
+            ? 0
+            : Math.min(b.totalAmount, Math.max(0, params.dpAmount));
+        return {
+          ...b,
+          paymentStatus: params.paymentStatus,
+          dpAmount: resolvedDp,
+          collateral: params.collateral,
+        };
+      })
+    );
+
+    if (!supabase) {
+      appendLocalAuditLog(
+        `Memperbarui pembayaran (${params.paymentStatus.toUpperCase()}) & jaminan booking`
+      );
+      triggerToast('Data pembayaran & jaminan diperbarui!');
+      return;
+    }
+
+    const { error } = await supabase.rpc('update_booking_handover', {
+      p_booking_id: params.bookingId,
+      p_payment_status: params.paymentStatus,
+      p_dp_amount: params.dpAmount,
+      p_collateral: params.collateral,
+    });
+
+    if (error) {
+      setBookings(prevBookings);
+      triggerToast(`Gagal menyimpan serah terima: ${error.message}`);
+      return;
+    }
+    triggerToast('Data pembayaran & jaminan berhasil disimpan!');
+  };
+
+  const sendTestShopNotification = async (chatId: string): Promise<boolean> => {
+    if (!chatId.trim()) {
+      triggerToast('Masukkan Telegram Chat ID terlebih dahulu.');
+      return false;
+    }
+    try {
+      let token: string | undefined;
+      if (supabase) {
+        const { data } = await supabase.auth.getSession();
+        token = data.session?.access_token;
+      }
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          event: 'test_shop_notify',
+          shopSlug: activeShopSlug,
+          chatId: chatId.trim(),
+          shopName: shop?.name,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        skipped?: boolean;
+        error?: string;
+        reason?: string;
+      };
+      if (json.skipped) {
+        triggerToast(json.reason || 'Bot Telegram server belum dikonfigurasi.');
+        return false;
+      }
+      if (!res.ok || !json.ok) {
+        triggerToast(json.error || 'Gagal mengirim tes notifikasi Telegram.');
+        return false;
+      }
+      triggerToast('✅ Pesan tes berhasil dikirim ke Telegram Anda!');
+      return true;
+    } catch {
+      triggerToast('Gagal menghubungi server notifikasi.');
+      return false;
+    }
   };
 
   const updateBookingStatus = async (bookingId: string, newStatus: BookingStatus) => {
@@ -838,8 +1084,11 @@ export function useShopData(params: {
     updateShopPlanLocally,
     createShopAtomically,
     createBookingOrder,
+    createWalkInBooking,
     updateBookingStatus,
+    updateBookingHandover,
     lookupBookingByCode,
+    sendTestShopNotification,
     inviteShopMember,
     removeShopMember,
     revokeShopInvite,

@@ -8,6 +8,7 @@ import type {
   ShopMember,
   ShopInvite,
   DiscountTier,
+  RentalBundle,
 } from '../types/index.ts';
 import { DEFAULT_DISCOUNT_TIERS, normalizeDiscountTiers } from './validators.ts';
 
@@ -63,6 +64,9 @@ export interface ShopDbRow {
   billing_cycle?: string | null;
   terms?: string[] | null;
   discount_tiers?: DiscountTier[] | null;
+  qris_url?: string | null;
+  notify_telegram_chat_id?: string | null;
+  bundles?: RentalBundle[] | null;
   partner_shop?: { name: string; slug: string } | null;
   logo_url?: string | null;
   created_at?: string;
@@ -138,6 +142,12 @@ export interface BookingDbRow {
   status: 'pending' | 'confirmed' | 'picked_up' | 'returned' | 'cancelled';
   total_amount: number;
   notes?: string | null;
+  pickup_time?: string | null;
+  delivery_mode?: 'pickup' | 'delivery' | null;
+  payment_status?: 'unpaid' | 'dp' | 'paid' | null;
+  dp_amount?: number | null;
+  collateral?: string | null;
+  source?: 'catalog' | 'walkin' | null;
   created_at: string;
   booking_lines?: BookingLineDbRow[];
 }
@@ -175,6 +185,9 @@ export const mapShopFromDb = (row: ShopDbRow): Shop => ({
   discountTiers: Array.isArray(row.discount_tiers)
     ? normalizeDiscountTiers(row.discount_tiers)
     : DEFAULT_DISCOUNT_TIERS,
+  qrisUrl: row.qris_url || '',
+  notifyTelegramChatId: row.notify_telegram_chat_id || '',
+  bundles: Array.isArray(row.bundles) ? row.bundles : [],
   partnerShop: row.partner_shop || undefined,
   logoUrl: row.logo_url || '',
 });
@@ -190,6 +203,9 @@ export const mapShopToDb = (shop: Shop): Omit<ShopDbRow, 'is_verified' | 'plan' 
   whatsapp: shop.whatsapp,
   terms: shop.terms || [],
   discount_tiers: normalizeDiscountTiers(shop.discountTiers),
+  qris_url: shop.qrisUrl || '',
+  notify_telegram_chat_id: shop.notifyTelegramChatId || '',
+  bundles: shop.bundles || [],
   partner_shop: shop.partnerShop || null,
   logo_url: shop.logoUrl || '',
 });
@@ -286,6 +302,15 @@ export const mapBookingFromDb = (row: BookingDbRow): Booking => ({
   status: row.status,
   totalAmount: Number(row.total_amount),
   notes: row.notes || '',
+  pickupTime: row.pickup_time || '09:00',
+  deliveryMode: row.delivery_mode === 'delivery' ? 'delivery' : 'pickup',
+  paymentStatus:
+    row.payment_status === 'paid' || row.payment_status === 'dp'
+      ? row.payment_status
+      : 'unpaid',
+  dpAmount: Number(row.dp_amount || 0),
+  collateral: row.collateral || '',
+  source: row.source === 'walkin' ? 'walkin' : 'catalog',
   createdAt: row.created_at,
   lines: Array.isArray(row.booking_lines)
     ? row.booking_lines.map(mapBookingLineFromDb)

@@ -9,6 +9,7 @@ import {
   ItemStatus,
   Role,
   Booking,
+  DeliveryMode,
 } from '@/types';
 import { DURATION_OPTIONS } from '@/data/mockData';
 import {
@@ -37,6 +38,7 @@ import { WaPreviewModal } from '@/components/WaPreviewModal';
 import { AddItemModal, NewItemFormState } from '@/components/AddItemModal';
 import { ItemDetailModal } from '@/components/ItemDetailModal';
 import { BookingStatusModal } from '@/components/BookingStatusModal';
+import { WalkInBookingModal } from '@/components/WalkInBookingModal';
 import { QrModal } from '@/components/QrModal';
 import { UpgradeModal } from '@/components/UpgradeModal';
 
@@ -78,6 +80,9 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showTerms, setShowTerms] = useState(false);
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [bundleCart, setBundleCart] = useState<Record<string, number>>({});
+  const [pickupTime, setPickupTime] = useState<string>('09:00');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('pickup');
   const [showWaPreviewModal, setShowWaPreviewModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [detailItem, setDetailItem] = useState<RentalItem | null>(null);
@@ -133,8 +138,11 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     updateShopPlanLocally,
     createShopAtomically,
     createBookingOrder,
+    createWalkInBooking,
     updateBookingStatus,
+    updateBookingHandover,
     lookupBookingByCode,
+    sendTestShopNotification,
     inviteShopMember,
     removeShopMember,
     revokeShopInvite,
@@ -150,6 +158,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   // Workspace State
   const [adminSearch, setAdminSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showWalkInModal, setShowWalkInModal] = useState(false);
   const [editingItem, setEditingItem] = useState<RentalItem | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -281,15 +290,34 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     });
   };
 
+  const updateBundleCartQty = (bundleId: string, delta: number, maxAvail: number) => {
+    setBundleCart((prev) => {
+      const currentQty = prev[bundleId] || 0;
+      const nextQty = currentQty + delta;
+      if (nextQty <= 0) {
+        const copy = { ...prev };
+        delete copy[bundleId];
+        return copy;
+      }
+      if (nextQty > maxAvail) {
+        triggerToast(`Maksimal kuota paket bundling tersedia ${maxAvail} paket.`);
+        return prev;
+      }
+      return { ...prev, [bundleId]: nextQty };
+    });
+  };
+
   const cartSummary = useMemo(() => {
     return calculateCartSummary(
       cart,
       items,
       currentDurationObj,
       availabilityMap,
-      shop?.discountTiers
+      shop?.discountTiers,
+      bundleCart,
+      shop?.bundles
     );
-  }, [cart, items, currentDurationObj, availabilityMap, shop?.discountTiers]);
+  }, [cart, items, currentDurationObj, availabilityMap, shop?.discountTiers, bundleCart, shop?.bundles]);
 
   const endDateIso = useMemo(
     () => addDaysToIsoDate(startDate, durationDays),
@@ -304,8 +332,10 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       endDate: endDateIso,
       durationLabel: currentDurationObj.label,
       cartSummary,
+      pickupTime,
+      deliveryMode,
     });
-  }, [cartSummary, shop, startDate, endDateIso, currentDurationObj]);
+  }, [cartSummary, shop, startDate, endDateIso, currentDurationObj, pickupTime, deliveryMode]);
 
   const copyToClipboard = async (text: string, successMsg = 'Berhasil disalin!') => {
     try {
@@ -343,6 +373,8 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     customerName: string;
     customerPhone: string;
     notes: string;
+    pickupTime: string;
+    deliveryMode: DeliveryMode;
   }) => {
     if (!shop) return;
     const parsed = CreateBookingSchema.safeParse({
@@ -360,8 +392,11 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       customerName: parsed.data.customerName,
       customerPhone: parsed.data.customerPhone,
       notes: parsed.data.notes,
+      pickupTime: customer.pickupTime,
+      deliveryMode: customer.deliveryMode,
       multiplier: currentDurationObj.multiplier,
       selectedList: cartSummary.selectedList,
+      selectedBundles: cartSummary.selectedBundles,
     });
 
     const origin =
@@ -378,10 +413,13 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       cartSummary,
       notes: booking.notes,
       trackingUrl,
+      pickupTime: customer.pickupTime,
+      deliveryMode: customer.deliveryMode,
     });
 
     setShowWaPreviewModal(false);
     setCart({});
+    setBundleCart({});
     triggerToast(`Kode Booking ${booking.code} berhasil dibuat!`);
     handleOpenWhatsApp(msgWithCode);
   };
@@ -726,7 +764,7 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   if (viewMode !== 'saas_home' && !shop) {
     return (
       <div className="min-h-screen bg-bg aurora text-fg flex items-center justify-center p-6">
-        <div className="max-w-sm w-full glass-strong rounded-[var(--radius-bento)] p-6 text-center space-y-4">
+        <div className="max-w-sm w-full glass-strong rounded-bento p-6 text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-warn-soft border border-warn/30 text-warn-text flex items-center justify-center mx-auto">
             <AlertTriangle className="w-6 h-6" />
           </div>
@@ -818,6 +856,8 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               categories={catalogCategories}
               cart={cart}
               onUpdateCartQty={updateCartQty}
+              bundleCart={bundleCart}
+              onUpdateBundleCartQty={updateBundleCartQty}
               onOpenWhatsApp={handleOpenWhatsApp}
               cartSummary={cartSummary}
               onOpenCheckoutModal={() => setShowWaPreviewModal(true)}
@@ -859,6 +899,9 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               invites={invites}
               members={members}
               onUpdateBookingStatus={updateBookingStatus}
+              onUpdateBookingHandover={updateBookingHandover}
+              onOpenWalkInModal={() => setShowWalkInModal(true)}
+              onSendTestNotification={sendTestShopNotification}
               onInviteMember={handleInviteMember}
               onRemoveMember={removeShopMember}
               onRevokeInvite={revokeShopInvite}
@@ -922,9 +965,29 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
             isOpen={showWaPreviewModal}
             onClose={() => setShowWaPreviewModal(false)}
             shopName={shop.name}
+            shopQrisUrl={shop.qrisUrl}
             whatsappMessageText={whatsappMessageText}
+            pickupTime={pickupTime}
+            setPickupTime={setPickupTime}
+            deliveryMode={deliveryMode}
+            setDeliveryMode={setDeliveryMode}
             onCopy={() => copyToClipboard(whatsappMessageText, 'Format pesan disalin!')}
             onSubmitBookingAndSend={handleCreateBookingAndOpenWa}
+          />
+
+          <WalkInBookingModal
+            isOpen={showWalkInModal}
+            onClose={() => setShowWalkInModal(false)}
+            items={items}
+            discountTiers={shop.discountTiers}
+            availabilityMap={availabilityMap}
+            formatRp={formatRp}
+            onSubmitWalkIn={async (params) => {
+              const created = await createWalkInBooking(params);
+              setSelectedReceiptBooking(created);
+              setLookupInitialCode(created.code);
+              setBookingModalOpen(true);
+            }}
           />
 
           <AddItemModal

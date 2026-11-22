@@ -7,6 +7,7 @@ import {
   addDaysToIsoDate,
   calculateCartSummary,
   computeShopAvailabilityMap,
+  computeBundleAvailability,
   getDurationMultiplier,
   buildShopDurationOptions,
   buildGoogleMapsUrl,
@@ -409,6 +410,46 @@ describe('Validasi Skema Zod & Keamanan Data Mapper', () => {
     assert.ok(csv.includes('Kode Booking,Tanggal Buat,Nama Penyewa'));
     assert.ok(csv.includes('SBR-261120-AA11'));
     assert.ok(csv.includes('"Andi ""Proyek"""'));
+  });
+
+  it('computeBundleAvailability & calculateCartSummary menghitung kuota & total paket bundling dari stok komponen fisik', () => {
+    const bundle = {
+      id: 'bnd-1',
+      name: 'Paket Camping Hemat',
+      description: '1 Tenda + 1 Jackhammer',
+      pricePerDay: 150000,
+      lines: [
+        { itemId: DEFAULT_ITEMS[0].id, qty: 1 }, // stock 4
+        { itemId: DEFAULT_ITEMS[2].id, qty: 1 }, // stock 2
+      ],
+    };
+    assert.equal(computeBundleAvailability(bundle, DEFAULT_ITEMS), 2);
+
+    const oneDay = DURATION_OPTIONS[0];
+    const summary = calculateCartSummary(
+      {},
+      DEFAULT_ITEMS,
+      oneDay,
+      undefined,
+      [],
+      { 'bnd-1': 2 },
+      [bundle]
+    );
+    assert.equal(summary.totalUnits, 2);
+    assert.equal(summary.totalCost, 300000);
+    assert.equal(summary.selectedBundles.length, 1);
+
+    const waText = buildWhatsappCheckoutMessage({
+      shopName: 'Borneo Rental',
+      startDate: '2026-11-22',
+      durationLabel: oneDay.label,
+      cartSummary: summary,
+      pickupTime: '14:00',
+      deliveryMode: 'delivery',
+    });
+    assert.ok(waText.includes('Paket Camping Hemat'));
+    assert.ok(waText.includes('14:00'));
+    assert.ok(waText.includes('Diantar Kurir'));
   });
 
   it('P0-3: sanitizeItemForRole menyembunyikan renterNote dari role customer tetapi tetap utuh bagi owner/staff', () => {

@@ -40,9 +40,26 @@ export const TelegramMemberJoinedEventSchema = z.object({
   siteOrigin: OptionalOriginSchema,
 });
 
+export const TelegramBookingCreatedEventSchema = z.object({
+  event: z.literal('booking_created'),
+  shopSlug: SlugFieldSchema,
+  bookingCode: z.string().trim().min(4).max(40),
+  siteOrigin: OptionalOriginSchema,
+});
+
+export const TelegramTestShopNotifyEventSchema = z.object({
+  event: z.literal('test_shop_notify'),
+  shopSlug: SlugFieldSchema,
+  chatId: z.string().trim().min(3).max(40),
+  shopName: z.string().trim().max(120).optional(),
+  siteOrigin: OptionalOriginSchema,
+});
+
 export const TelegramNotifyRequestSchema = z.discriminatedUnion('event', [
   TelegramShopCreatedEventSchema,
   TelegramMemberJoinedEventSchema,
+  TelegramBookingCreatedEventSchema,
+  TelegramTestShopNotifyEventSchema,
 ]);
 
 export type TelegramNotifyRequest = z.infer<typeof TelegramNotifyRequestSchema>;
@@ -193,6 +210,61 @@ export function formatMemberJoinedTelegramMessage(input: MemberJoinedAlertInput)
     lines.push(`📊 <b>Total Anggota Toko Ini:</b> ${input.totalShopMembers} Orang`);
   }
 
+  return lines.join('\n');
+}
+
+export interface BookingCreatedAlertInput {
+  shopSlug: string;
+  shopName: string;
+  code: string;
+  customerName: string;
+  customerPhone: string;
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+  pickupTime?: string;
+  deliveryMode?: string;
+  totalAmount: number;
+  notes?: string;
+  lines?: { item_name: string; qty: number; subtotal: number }[];
+  siteOrigin?: string;
+}
+
+export function formatBookingCreatedTelegramMessage(input: BookingCreatedAlertInput): string {
+  const cleanSlug = sanitizeSlug(input.shopSlug);
+  const origin = normalizeOrigin(input.siteOrigin);
+  const workspaceUrl = `${origin}/${cleanSlug}?view=workspace`;
+  const cleanWa = normalizeWhatsapp(input.customerPhone);
+  const waLink = cleanWa
+    ? `<a href="https://wa.me/${escapeTelegramHtml(cleanWa)}">+${escapeTelegramHtml(cleanWa)}</a>`
+    : escapeTelegramHtml(input.customerPhone);
+
+  const unitList = (input.lines || [])
+    .map((l) => `• ${escapeTelegramHtml(l.item_name)} × ${l.qty}`)
+    .join('\n');
+
+  const lines = [
+    '🔔 <b>ORDER SEWA BARU MASUK!</b>',
+    '━━━━━━━━━━━━━━━━━━',
+    `<b>Toko      :</b> ${escapeTelegramHtml(input.shopName)}`,
+    `<b>Kode      :</b> <code>${escapeTelegramHtml(input.code)}</code>`,
+    `<b>Penyewa   :</b> ${escapeTelegramHtml(input.customerName)} (${waLink})`,
+    `<b>Jadwal    :</b> ${escapeTelegramHtml(input.startDate)} s/d ${escapeTelegramHtml(input.endDate)} (${input.durationDays} hari)`,
+    `<b>Jam/Ambil :</b> ${escapeTelegramHtml(input.pickupTime || '09:00')} • ${
+      input.deliveryMode === 'delivery' ? 'Diantar Kurir' : 'Ambil di Toko'
+    }`,
+    `<b>Total     :</b> Rp${Math.round(input.totalAmount).toLocaleString('id-ID')}`,
+  ];
+
+  if (unitList) {
+    lines.push('━━━━━━━━━━━━━━━━━━');
+    lines.push(`<b>Rincian Unit:</b>\n${unitList}`);
+  }
+  if (input.notes?.trim()) {
+    lines.push(`<b>Catatan   :</b> ${escapeTelegramHtml(input.notes.trim())}`);
+  }
+  lines.push('━━━━━━━━━━━━━━━━━━');
+  lines.push(`<a href="${escapeTelegramHtml(workspaceUrl)}">Buka Panel Booking Toko →</a>`);
   return lines.join('\n');
 }
 

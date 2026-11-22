@@ -1,18 +1,26 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Copy, MessageCircle, CalendarCheck, User, Phone, FileText, X } from 'lucide-react';
+import { Copy, MessageCircle, CalendarCheck, User, Phone, FileText, X, Clock, Truck, Store, QrCode } from 'lucide-react';
+import { DeliveryMode } from '../types';
 
 interface WaPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   shopName: string;
+  shopQrisUrl?: string;
   whatsappMessageText: string;
+  pickupTime: string;
+  setPickupTime: (val: string) => void;
+  deliveryMode: DeliveryMode;
+  setDeliveryMode: (val: DeliveryMode) => void;
   onCopy: () => void;
   onSubmitBookingAndSend: (customer: {
     customerName: string;
     customerPhone: string;
     notes: string;
+    pickupTime: string;
+    deliveryMode: DeliveryMode;
   }) => Promise<void>;
 }
 
@@ -20,13 +28,19 @@ export const WaPreviewModal: React.FC<WaPreviewModalProps> = ({
   isOpen,
   onClose,
   shopName,
+  shopQrisUrl,
   whatsappMessageText,
+  pickupTime,
+  setPickupTime,
+  deliveryMode,
+  setDeliveryMode,
   onCopy,
   onSubmitBookingAndSend,
 }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const [showQris, setShowQris] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -49,6 +63,8 @@ export const WaPreviewModal: React.FC<WaPreviewModalProps> = ({
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         notes: notes.trim(),
+        pickupTime,
+        deliveryMode,
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Gagal membuat kode booking.');
@@ -118,6 +134,62 @@ export const WaPreviewModal: React.FC<WaPreviewModalProps> = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-bold text-fg-soft mb-1">
+                Jam Rencana Ambil
+              </label>
+              <div className="relative">
+                <Clock className="w-3.5 h-3.5 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
+                <select
+                  value={pickupTime}
+                  onChange={(e) => setPickupTime(e.target.value)}
+                  className="field pl-8 text-xs py-2 font-bold"
+                >
+                  {['08:00', '09:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'].map(
+                    (t) => (
+                      <option key={t} value={t} className="bg-surface text-fg">
+                        Jam {t}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-fg-soft mb-1">
+                Pengambilan Unit
+              </label>
+              <div className="grid grid-cols-2 gap-1 bg-surface-2 border border-line p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setDeliveryMode('pickup')}
+                  className={`py-1.5 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                    deliveryMode === 'pickup'
+                      ? 'bg-accent text-accent-fg shadow-xs'
+                      : 'text-muted hover:text-fg'
+                  }`}
+                >
+                  <Store className="w-3 h-3" />
+                  <span>Di Toko</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeliveryMode('delivery')}
+                  className={`py-1.5 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                    deliveryMode === 'delivery'
+                      ? 'bg-accent text-accent-fg shadow-xs'
+                      : 'text-muted hover:text-fg'
+                  }`}
+                >
+                  <Truck className="w-3 h-3" />
+                  <span>Diantar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-fg-soft mb-1">
               Catatan Tambahan (Opsional)
@@ -126,13 +198,43 @@ export const WaPreviewModal: React.FC<WaPreviewModalProps> = ({
               <FileText className="w-3.5 h-3.5 text-subtle absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Jam ambil / keperluan proyek..."
+                placeholder={
+                  deliveryMode === 'delivery'
+                    ? 'Alamat lengkap pengantaran / patokan...'
+                    : 'Keperluan acara / proyek...'
+                }
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="field pl-8 text-xs py-2"
               />
             </div>
           </div>
+
+          {shopQrisUrl && (
+            <div className="rounded-2xl border border-line bg-surface-2/60 p-2.5 space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowQris(!showQris)}
+                className="w-full flex items-center justify-between text-xs font-bold text-accent-text cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5">
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Lihat QRIS Resmi Toko untuk Pembayaran DP</span>
+                </span>
+                <span className="text-[10px] underline">{showQris ? 'Tutup' : 'Buka QRIS'}</span>
+              </button>
+              {showQris && (
+                <div className="bg-white p-2 rounded-xl border border-line text-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={shopQrisUrl}
+                    alt={`QRIS ${shopName}`}
+                    className="max-h-56 mx-auto object-contain rounded-lg"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="bg-accent-soft/60 border border-accent/25 rounded-2xl p-3 text-[11px] text-fg font-mono whitespace-pre-line max-h-44 overflow-y-auto shadow-inner">

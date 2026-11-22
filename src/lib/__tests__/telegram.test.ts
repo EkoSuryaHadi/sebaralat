@@ -206,5 +206,28 @@ describe('Utilitas & Keamanan Notifikasi Telegram', () => {
     assert.ok(failRes.error);
     assert.equal(failRes.error.includes('SECRET_TOKEN_XYZ'), false);
   });
+
+  it('formatBookingCreatedTelegramMessage memformat alert order baru untuk Owner toko dengan aman', async () => {
+    const { formatBookingCreatedTelegramMessage } = await import('../telegram.ts');
+    const html = formatBookingCreatedTelegramMessage({
+      shopSlug: 'borneo-rental',
+      shopName: 'Borneo <Rental>',
+      code: 'SBR-261122-TEST',
+      customerName: 'Budi & Co',
+      customerPhone: '08123456789',
+      startDate: '2026-11-22',
+      endDate: '2026-11-23',
+      durationDays: 2,
+      pickupTime: '14:00',
+      deliveryMode: 'delivery',
+      totalAmount: 250000,
+      lines: [{ item_name: 'Tenda 4P', qty: 1, subtotal: 250000 }],
+    });
+    assert.ok(html.includes('ORDER SEWA BARU MASUK'));
+    assert.ok(html.includes('SBR-261122-TEST'));
+    assert.ok(html.includes('Borneo &lt;Rental&gt;'));
+    assert.ok(html.includes('Diantar Kurir'));
+    assert.ok(html.includes('wa.me/628123456789'));
+  });
 });
 

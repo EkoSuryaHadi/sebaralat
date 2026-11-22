@@ -33,6 +33,10 @@ import {
   Download,
   Printer,
   Award,
+  Bell,
+  Send,
+  Package,
+  QrCode as QrIcon,
 } from 'lucide-react';
 import {
   Shop,
@@ -46,6 +50,8 @@ import {
   ShopInvite,
   ShopMember,
   DiscountTier,
+  PaymentStatus,
+  RentalBundle,
 } from '../types';
 import { uploadShopLogo } from '@/lib/imageUtils';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -76,6 +82,14 @@ interface WorkspaceViewProps {
   invites: ShopInvite[];
   members?: ShopMember[];
   onUpdateBookingStatus: (bookingId: string, newStatus: BookingStatus) => Promise<void>;
+  onUpdateBookingHandover?: (params: {
+    bookingId: string;
+    paymentStatus: PaymentStatus;
+    dpAmount: number;
+    collateral: string;
+  }) => Promise<void>;
+  onOpenWalkInModal?: () => void;
+  onSendTestNotification?: (chatId: string) => Promise<boolean>;
   onInviteMember: (email: string, role: 'owner' | 'staff') => Promise<void>;
   onRemoveMember?: (userId: string, email: string) => Promise<void>;
   onRevokeInvite?: (inviteId: string, email: string) => Promise<void>;
@@ -111,6 +125,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   invites,
   members = [],
   onUpdateBookingStatus,
+  onUpdateBookingHandover,
+  onOpenWalkInModal,
+  onSendTestNotification,
   onInviteMember,
   onRemoveMember,
   onRevokeInvite,
@@ -144,7 +161,17 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   const [newTierPercent, setNewTierPercent] = useState('10');
   const [newTermInput, setNewTermInput] = useState('');
   const [analyticsPeriodDays, setAnalyticsPeriodDays] = useState<number | null>(null);
+  const [isUploadingQris, setIsUploadingQris] = useState(false);
+  const [isTestingNotify, setIsTestingNotify] = useState(false);
+  const [newBundleName, setNewBundleName] = useState('');
+  const [newBundleDesc, setNewBundleDesc] = useState('');
+  const [newBundlePrice, setNewBundlePrice] = useState('');
+  const [newBundleItemId, setNewBundleItemId] = useState('');
+  const [handoverDrafts, setHandoverDrafts] = useState<
+    Record<string, { paymentStatus?: PaymentStatus; dpAmount?: string; collateral?: string }>
+  >({});
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const qrisInputRef = useRef<HTMLInputElement>(null);
 
   const analyticsSummary = computeShopAnalytics(bookings, analyticsPeriodDays);
 
@@ -176,6 +203,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         mapsUrl: string;
         terms: string[];
         discountTiers: DiscountTier[];
+        qrisUrl: string;
+        notifyTelegramChatId: string;
+        bundles: RentalBundle[];
       }>
     >
   >({});
@@ -192,6 +222,10 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     discountTiers:
       currentShopEdit.discountTiers ??
       (shop.discountTiers ?? DEFAULT_DISCOUNT_TIERS),
+    qrisUrl: currentShopEdit.qrisUrl ?? (shop.qrisUrl || ''),
+    notifyTelegramChatId:
+      currentShopEdit.notifyTelegramChatId ?? (shop.notifyTelegramChatId || ''),
+    bundles: currentShopEdit.bundles ?? (shop.bundles || []),
   };
 
   const setShopDraft = (nextDraft: typeof shopDraft) => {
@@ -412,7 +446,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Tombol Tambah Alat Hanya Muncul untuk Owner */}
             {currentRole === 'owner' && (
               <button
@@ -421,6 +455,17 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               >
                 <PackagePlus className="w-4 h-4" />
                 <span>+ Tambah Unit</span>
+              </button>
+            )}
+
+            {onOpenWalkInModal && (
+              <button
+                type="button"
+                onClick={onOpenWalkInModal}
+                className="btn-glass px-3 py-2 text-xs font-bold text-accent-text shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>+ Sewa Walk-in</span>
               </button>
             )}
 
@@ -668,13 +713,25 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       {/* SUB-TAB BOOKING: DAFTAR PESANAN & JADWAL SEWA */}
       {workspaceTab === 'bookings' && (
         <div className="bento p-4 sm:p-5 border-line space-y-3">
-          <div className="border-b border-line pb-2.5">
-            <h3 className="font-display text-sm font-extrabold text-fg">
-              Jadwal Booking &amp; Ketersediaan Tanggal
-            </h3>
-            <p className="text-[11px] text-muted">
-              Booking yang berstatus Confirmed atau Picked Up otomatis mengurangi stok pada tanggal terkait.
-            </p>
+          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-line pb-2.5">
+            <div>
+              <h3 className="font-display text-sm font-extrabold text-fg">
+                Jadwal Booking &amp; Ketersediaan Tanggal
+              </h3>
+              <p className="text-[11px] text-muted">
+                Booking yang berstatus Confirmed atau Picked Up otomatis mengurangi stok pada tanggal terkait.
+              </p>
+            </div>
+            {onOpenWalkInModal && (
+              <button
+                type="button"
+                onClick={onOpenWalkInModal}
+                className="btn-brutal px-3.5 py-2 text-xs shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>+ Catat Sewa Walk-in</span>
+              </button>
+            )}
           </div>
 
           {bookings.length === 0 ? (
@@ -720,6 +777,105 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
                   {bk.notes && (
                     <p className="text-[11px] text-muted italic">Catatan: {bk.notes}</p>
+                  )}
+
+                  {/* Kontrol Pembayaran (DP/Lunas) & Jaminan Serah Terima */}
+                  {onUpdateBookingHandover && (
+                    <div className="p-2.5 rounded-xl bg-surface border border-line grid grid-cols-1 sm:grid-cols-12 gap-2 items-end text-xs">
+                      <div className="sm:col-span-3">
+                        <label className="block text-[10px] font-bold text-muted mb-1">
+                          Pembayaran
+                        </label>
+                        <select
+                          value={
+                            handoverDrafts[bk.id]?.paymentStatus ??
+                            bk.paymentStatus ??
+                            'unpaid'
+                          }
+                          onChange={(e) =>
+                            setHandoverDrafts((prev) => ({
+                              ...prev,
+                              [bk.id]: {
+                                ...prev[bk.id],
+                                paymentStatus: e.target.value as PaymentStatus,
+                              },
+                            }))
+                          }
+                          className="field text-[11px] py-1.5 px-2 font-bold"
+                        >
+                          <option value="unpaid">⏳ Belum Bayar</option>
+                          <option value="dp">🟡 Baru DP</option>
+                          <option value="paid">✅ Lunas</option>
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-3">
+                        <label className="block text-[10px] font-bold text-muted mb-1">
+                          Nominal DP (Rp)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={
+                            handoverDrafts[bk.id]?.dpAmount ?? String(bk.dpAmount || 0)
+                          }
+                          onChange={(e) =>
+                            setHandoverDrafts((prev) => ({
+                              ...prev,
+                              [bk.id]: {
+                                ...prev[bk.id],
+                                dpAmount: e.target.value,
+                              },
+                            }))
+                          }
+                          className="field text-[11px] py-1.5 px-2"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-4">
+                        <label className="block text-[10px] font-bold text-muted mb-1">
+                          Jaminan Ditahan
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="E-KTP / SIM C..."
+                          value={
+                            handoverDrafts[bk.id]?.collateral ?? bk.collateral ?? ''
+                          }
+                          onChange={(e) =>
+                            setHandoverDrafts((prev) => ({
+                              ...prev,
+                              [bk.id]: {
+                                ...prev[bk.id],
+                                collateral: e.target.value,
+                              },
+                            }))
+                          }
+                          className="field text-[11px] py-1.5 px-2"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const draft = handoverDrafts[bk.id] || {};
+                            onUpdateBookingHandover({
+                              bookingId: bk.id,
+                              paymentStatus:
+                                draft.paymentStatus ?? bk.paymentStatus ?? 'unpaid',
+                              dpAmount:
+                                Number(draft.dpAmount ?? bk.dpAmount ?? 0) || 0,
+                              collateral:
+                                draft.collateral ?? bk.collateral ?? '',
+                            });
+                          }}
+                          className="btn-glass w-full py-1.5 px-2 text-[11px] font-bold text-accent-text"
+                        >
+                          Simpan
+                        </button>
+                      </div>
+                    </div>
                   )}
 
                   <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
@@ -1496,6 +1652,223 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               </div>
             </div>
 
+            {/* Editor QRIS Pembayaran Toko */}
+            <div className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-[11px] font-extrabold text-fg flex items-center gap-1.5">
+                    <QrIcon className="w-3.5 h-3.5 text-accent-text" />
+                    Gambar QRIS Pembayaran Toko (Tampil di Checkout &amp; Nota)
+                  </span>
+                  <p className="text-[10px] text-muted mt-0.5">
+                    Pelanggan bisa langsung scan QRIS toko Anda saat membayar DP atau pelunasan.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={isUploadingQris}
+                  onClick={() => qrisInputRef.current?.click()}
+                  className="btn-glass text-[11px] px-3 py-1.5 font-bold text-accent-text shrink-0"
+                >
+                  {isUploadingQris ? 'Mengompres...' : shopDraft.qrisUrl ? 'Ganti QRIS' : 'Upload QRIS'}
+                </button>
+              </div>
+              {shopDraft.qrisUrl && (
+                <div className="flex items-center gap-3 bg-surface p-2 rounded-xl border border-line">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={shopDraft.qrisUrl}
+                    alt="QRIS Toko"
+                    className="w-16 h-16 object-contain bg-white rounded-lg border border-line"
+                  />
+                  <div className="flex-1 text-[11px] text-muted">
+                    QRIS aktif &amp; siap ditampilkan di Checkout dan Nota.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShopDraft({ ...shopDraft, qrisUrl: '' })}
+                    className="text-[11px] font-bold text-danger-text hover:underline cursor-pointer"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              )}
+              <input
+                ref={qrisInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    setIsUploadingQris(true);
+                    const uploaded = await uploadShopLogo(file, `${shop.slug}-qris`);
+                    setShopDraft({ ...shopDraft, qrisUrl: uploaded });
+                    triggerToast('Gambar QRIS siap disimpan! Klik Simpan Perubahan di bawah.');
+                  } catch {
+                    triggerToast('Gagal memproses gambar QRIS.');
+                  } finally {
+                    setIsUploadingQris(false);
+                    if (qrisInputRef.current) qrisInputRef.current.value = '';
+                  }
+                }}
+              />
+            </div>
+
+            {/* Editor Notifikasi Telegram Order Masuk Real-Time */}
+            <div className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-2.5">
+              <div>
+                <span className="text-[11px] font-extrabold text-fg flex items-center gap-1.5">
+                  <Bell className="w-3.5 h-3.5 text-accent-text" />
+                  Notifikasi Order Masuk Real-Time (Telegram Owner)
+                </span>
+                <p className="text-[10px] text-muted mt-0.5">
+                  Masukkan Telegram Chat ID Anda agar langsung mendapat alert setiap ada pengajuan booking baru (mencegah lost-lead).
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Contoh: 123456789 (cek via @userinfobot)"
+                  value={shopDraft.notifyTelegramChatId}
+                  onChange={(e) =>
+                    setShopDraft({ ...shopDraft, notifyTelegramChatId: e.target.value })
+                  }
+                  className="field text-xs py-2 flex-1 font-mono"
+                />
+                {onSendTestNotification && (
+                  <button
+                    type="button"
+                    disabled={isTestingNotify || !shopDraft.notifyTelegramChatId.trim()}
+                    onClick={async () => {
+                      setIsTestingNotify(true);
+                      try {
+                        await onSendTestNotification(shopDraft.notifyTelegramChatId);
+                      } finally {
+                        setIsTestingNotify(false);
+                      }
+                    }}
+                    className="btn-glass text-xs px-3 py-2 font-bold text-accent-text shrink-0 flex items-center gap-1"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{isTestingNotify ? 'Mengirim...' : 'Tes Kirim'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Editor Paket Bundling Hemat */}
+            <div className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-2.5">
+              <div>
+                <span className="text-[11px] font-extrabold text-fg flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5 text-accent-text" />
+                  Paket Bundling Hemat (Stok Sinkron Unit Asli)
+                </span>
+                <p className="text-[10px] text-muted mt-0.5">
+                  Gabungkan beberapa unit alat menjadi satu paket hemat untuk menaikkan nilai transaksi.
+                </p>
+              </div>
+
+              {shopDraft.bundles.length > 0 && (
+                <div className="space-y-1.5">
+                  {shopDraft.bundles.map((bnd, idx) => (
+                    <div
+                      key={bnd.id}
+                      className="flex items-center justify-between gap-2 bg-surface border border-line rounded-xl px-3 py-2 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <strong className="text-fg block truncate">{bnd.name}</strong>
+                        <span className="text-[10px] text-muted">
+                          {formatRp(bnd.pricePerDay)}/hari • {bnd.lines.length} jenis unit
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShopDraft({
+                            ...shopDraft,
+                            bundles: shopDraft.bundles.filter((_, i) => i !== idx),
+                          })
+                        }
+                        className="p-1.5 text-danger-text hover:bg-danger-soft rounded-lg cursor-pointer"
+                        title="Hapus paket bundling"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="Nama Paket (misal: Paket Camping Berdua)"
+                  value={newBundleName}
+                  onChange={(e) => setNewBundleName(e.target.value)}
+                  className="field text-xs py-1.5"
+                />
+                <input
+                  type="number"
+                  min={1000}
+                  placeholder="Tarif Paket/Hari (misal: 75000)"
+                  value={newBundlePrice}
+                  onChange={(e) => setNewBundlePrice(e.target.value)}
+                  className="field text-xs py-1.5"
+                />
+                <input
+                  type="text"
+                  placeholder="Deskripsi singkat isi paket..."
+                  value={newBundleDesc}
+                  onChange={(e) => setNewBundleDesc(e.target.value)}
+                  className="field text-xs py-1.5"
+                />
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={newBundleItemId || filteredAdminItems[0]?.id || ''}
+                    onChange={(e) => setNewBundleItemId(e.target.value)}
+                    className="field text-xs py-1.5 flex-1"
+                  >
+                    {filteredAdminItems.map((it) => (
+                      <option key={it.id} value={it.id}>
+                        {it.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetId = newBundleItemId || filteredAdminItems[0]?.id;
+                      const price = Number(newBundlePrice);
+                      if (!newBundleName.trim() || !price || !targetId) {
+                        triggerToast('Isi nama paket, tarif paket, dan pilih unit komponen.');
+                        return;
+                      }
+                      const nextBundle: RentalBundle = {
+                        id: `bnd-${Date.now()}`,
+                        name: newBundleName.trim(),
+                        description: newBundleDesc.trim(),
+                        pricePerDay: price,
+                        lines: [{ itemId: targetId, qty: 1 }],
+                      };
+                      setShopDraft({
+                        ...shopDraft,
+                        bundles: [...shopDraft.bundles, nextBundle],
+                      });
+                      setNewBundleName('');
+                      setNewBundleDesc('');
+                      setNewBundlePrice('');
+                      triggerToast('Paket bundling ditambahkan! Klik Simpan Perubahan.');
+                    }}
+                    className="btn-glass text-xs px-3 py-1.5 font-bold text-accent-text shrink-0"
+                  >
+                    + Paket
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Manajemen Anggota & Undangan Email Staf Gudang */}
             <div className="p-3.5 rounded-2xl bg-surface-2 border border-line space-y-3">
               <div className="flex items-center justify-between">
@@ -1660,6 +2033,9 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   mapsUrl: shopDraft.mapsUrl.trim(),
                   terms: cleanTerms,
                   discountTiers: cleanDiscountTiers,
+                  qrisUrl: shopDraft.qrisUrl.trim(),
+                  notifyTelegramChatId: shopDraft.notifyTelegramChatId.trim(),
+                  bundles: shopDraft.bundles,
                 });
                 onRecordAuditLog('Memperbarui pengaturan profil, S&K, dan aturan diskon toko');
                 triggerToast('Pengaturan toko berhasil disimpan!');

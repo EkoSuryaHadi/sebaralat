@@ -22,6 +22,18 @@ export const DEFAULT_SHOPS: Shop[] = [
       { minDays: 3, discountPercent: 10 },
       { minDays: 7, discountPercent: 25 },
     ],
+    bundles: [
+      {
+        id: 'bnd-camping-hemat',
+        name: 'Paket Camping Berdua Hemat',
+        description: '1x Tenda Eiger 4-5 Orang + 1x Kompor Windproof',
+        pricePerDay: 75000,
+        lines: [
+          { itemId: '00000000-0000-4000-8000-000000000001', qty: 1 },
+          { itemId: '00000000-0000-4000-8000-000000000003', qty: 1 },
+        ],
+      },
+    ],
     partnerShop: {
       name: 'Kaltim Pro Kamera & Multimedia',
       slug: 'kaltim-kamera',
@@ -45,6 +57,18 @@ export const DEFAULT_SHOPS: Shop[] = [
     discountTiers: [
       { minDays: 3, discountPercent: 10 },
       { minDays: 7, discountPercent: 25 },
+    ],
+    bundles: [
+      {
+        id: 'bnd-camping-hemat',
+        name: 'Paket Camping Berdua Hemat',
+        description: '1x Tenda Eiger 4-5 Orang + 1x Kompor Windproof',
+        pricePerDay: 75000,
+        lines: [
+          { itemId: '00000000-0000-4000-8000-000000000001', qty: 1 },
+          { itemId: '00000000-0000-4000-8000-000000000003', qty: 1 },
+        ],
+      },
     ],
     partnerShop: {
       name: 'Borneo Outdoor & Teknik Rental',

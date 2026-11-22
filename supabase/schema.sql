@@ -12,4 +12,5 @@
 -- 5. supabase/migrations/0005_subscriptions.sql           (Manajemen paket Starter 8 item vs Bisnis PRO & masa aktif langganan)
 -- 6. supabase/migrations/0006_phase1_improvements.sql     (Tier diskon durasi kustom milik Owner & fungsi shop_duration_multiplier)
 -- 7. supabase/migrations/0007_phase2_pro_monetization.sql (RPC get_public_booking_by_code dengan PII masking untuk cek status & nota booking publik)
--- 8. supabase/seed.sql                                    (Opsional: data demo pengembangan)
+-- 8. supabase/migrations/0008_phase3_operations_bundles.sql  (Notifikasi Telegram Owner, Serah Terima DP/Jaminan, Walk-in Rental, QRIS & Paket Bundling)
+-- 9. supabase/seed.sql                                    (Opsional: data demo pengembangan)

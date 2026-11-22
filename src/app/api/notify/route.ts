@@ -7,6 +7,7 @@ import {
   SupabaseWebhookPayloadSchema,
   formatShopCreatedTelegramMessage,
   formatMemberJoinedTelegramMessage,
+  formatBookingCreatedTelegramMessage,
   claimNotificationKey,
   sendTelegramBotMessage,
 } from '@/lib/telegram';
@@ -161,6 +162,79 @@ export async function POST(request: NextRequest) {
   const eventPayload = parsedReq.data;
 
   // =========================================================
+  // JALUR 2A: LEAD BOOKING BARU KE TELEGRAM OWNER TOKO (PUBLIK/ANON)
+  // =========================================================
+  if (eventPayload.event === 'booking_created') {
+    if (!claimNotificationKey(`booking:${eventPayload.shopSlug}:${eventPayload.bookingCode}`)) {
+      return Response.json({ ok: true, deduplicated: true });
+    }
+
+    if (isSupabaseConfigured) {
+      const serverSb = createServerSupabaseClient();
+      if (!serverSb) {
+        return Response.json({ ok: false, skipped: true }, { status: 200 });
+      }
+      const { data: notifyData, error: notifyErr } = await serverSb.rpc(
+        'get_booking_notify_payload',
+        {
+          p_shop_slug: eventPayload.shopSlug,
+          p_booking_code: eventPayload.bookingCode,
+        }
+      );
+
+      if (notifyErr || !notifyData) {
+        return Response.json({ ok: true, skipped: true, reason: 'no_shop_telegram_configured' });
+      }
+
+      const payload = notifyData as {
+        chat_id: string;
+        shop_name: string;
+        shop_slug: string;
+        code: string;
+        customer_name: string;
+        customer_phone: string;
+        start_date: string;
+        end_date: string;
+        duration_days: number;
+        pickup_time?: string;
+        delivery_mode?: string;
+        total_amount: number;
+        notes?: string;
+        lines?: { item_name: string; qty: number; subtotal: number }[];
+      };
+
+      const html = formatBookingCreatedTelegramMessage({
+        shopSlug: payload.shop_slug,
+        shopName: payload.shop_name,
+        code: payload.code,
+        customerName: payload.customer_name,
+        customerPhone: payload.customer_phone,
+        startDate: payload.start_date,
+        endDate: payload.end_date,
+        durationDays: payload.duration_days,
+        pickupTime: payload.pickup_time,
+        deliveryMode: payload.delivery_mode,
+        totalAmount: Number(payload.total_amount),
+        notes: payload.notes,
+        lines: payload.lines,
+        siteOrigin: trustedOrigin,
+      });
+
+      const sendRes = await sendTelegramBotMessage({
+        botToken,
+        chatId: payload.chat_id,
+        html,
+      });
+      if (!sendRes.ok) {
+        return Response.json({ ok: false, error: 'Gagal mengirim notifikasi ke Telegram toko.' }, { status: 502 });
+      }
+      return Response.json({ ok: true });
+    }
+
+    return Response.json({ ok: true, skipped: true, reason: 'local_preview_mode' });
+  }
+
+  // =========================================================
   // JALUR 2: VERIFIKASI SESI SUPABASE (PRODUKSI & STAGING)
   // =========================================================
   if (isSupabaseConfigured) {
@@ -235,6 +309,36 @@ export async function POST(request: NextRequest) {
       if (!sendRes.ok) {
         console.error('[TelegramNotify] Gagal mengirim alert toko baru:', sendRes.error);
         return Response.json({ ok: false, error: 'Gagal mengirim ke Telegram.' }, { status: 502 });
+      }
+      return Response.json({ ok: true });
+    }
+
+    if (eventPayload.event === 'test_shop_notify') {
+      const { data: memberRow } = await userSb
+        .from('shop_members')
+        .select('role')
+        .eq('shop_slug', eventPayload.shopSlug)
+        .eq('user_id', currentUser.id)
+        .eq('role', 'owner')
+        .maybeSingle();
+
+      if (!memberRow) {
+        return Response.json(
+          { ok: false, error: 'Hanya Owner toko yang dapat menguji notifikasi Telegram.' },
+          { status: 403 }
+        );
+      }
+
+      const sendRes = await sendTelegramBotMessage({
+        botToken,
+        chatId: eventPayload.chatId,
+        html: `✅ <b>Tes Notifikasi Sebaraja Berhasil!</b>\nToko <b>${eventPayload.shopName || eventPayload.shopSlug}</b> siap menerima alert order masuk secara real-time.`,
+      });
+      if (!sendRes.ok) {
+        return Response.json(
+          { ok: false, error: sendRes.error || 'Gagal mengirim tes Telegram. Pastikan Chat ID benar dan bot sudah di-start.' },
+          { status: 502 }
+        );
       }
       return Response.json({ ok: true });
     }
@@ -327,6 +431,18 @@ export async function POST(request: NextRequest) {
     const sendRes = await sendTelegramBotMessage({ botToken, chatId, html });
     if (!sendRes.ok) {
       console.error('[TelegramNotify] Dev alert gagal:', sendRes.error);
+      return Response.json({ ok: false, error: sendRes.error }, { status: 502 });
+    }
+    return Response.json({ ok: true, mode: 'development' });
+  }
+
+  if (eventPayload.event === 'test_shop_notify') {
+    const sendRes = await sendTelegramBotMessage({
+      botToken,
+      chatId: eventPayload.chatId,
+      html: `✅ <b>Tes Notifikasi Sebaraja (Dev) Berhasil!</b>\nToko <b>${eventPayload.shopName || eventPayload.shopSlug}</b> siap menerima alert order masuk.`,
+    });
+    if (!sendRes.ok) {
       return Response.json({ ok: false, error: sendRes.error }, { status: 502 });
     }
     return Response.json({ ok: true, mode: 'development' });

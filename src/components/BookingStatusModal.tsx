@@ -289,9 +289,38 @@ export const BookingStatusModal: React.FC<BookingStatusModalProps> = ({
                   <strong className="text-fg font-bold block">
                     {activeBooking.startDate} s/d {activeBooking.endDate}
                   </strong>
-                  <span className="text-[10px] text-accent-text font-bold">
-                    Durasi: {activeBooking.durationDays} Hari
+                  <span className="text-[10px] text-accent-text font-bold block">
+                    Durasi: {activeBooking.durationDays} Hari ({activeBooking.pickupTime || '09:00'})
                   </span>
+                  <span className="text-[10px] text-muted block">
+                    {activeBooking.deliveryMode === 'delivery' ? '🚚 Diantar Kurir' : '🏪 Ambil di Toko'}
+                    {activeBooking.source === 'walkin' ? ' • Walk-in' : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Pembayaran & Jaminan */}
+              <div className="grid grid-cols-2 gap-2 text-xs bg-surface rounded-xl p-3 border border-line">
+                <div>
+                  <span className="text-[10px] text-muted font-bold block">Status Pembayaran</span>
+                  <strong className="text-fg font-bold">
+                    {activeBooking.paymentStatus === 'paid'
+                      ? '✅ Lunas'
+                      : activeBooking.paymentStatus === 'dp'
+                      ? `🟡 DP ${formatRp(activeBooking.dpAmount || 0)}`
+                      : '⏳ Belum Bayar'}
+                  </strong>
+                  {activeBooking.paymentStatus !== 'paid' && (
+                    <span className="text-[10px] text-danger-text font-bold block">
+                      Sisa: {formatRp(Math.max(0, activeBooking.totalAmount - (activeBooking.dpAmount || 0)))}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted font-bold block">Jaminan Sewa</span>
+                  <strong className="text-fg font-bold">
+                    {activeBooking.collateral || '-'}
+                  </strong>
                 </div>
               </div>
 
@@ -334,6 +363,22 @@ export const BookingStatusModal: React.FC<BookingStatusModalProps> = ({
                   {formatRp(activeBooking.totalAmount)}
                 </span>
               </div>
+
+              {shop.qrisUrl && activeBooking.paymentStatus !== 'paid' && (
+                <div className="pt-2 border-t border-line text-center space-y-1.5">
+                  <span className="text-[10px] font-extrabold uppercase text-muted block">
+                    Scan QRIS Resmi Toko untuk Pembayaran DP / Pelunasan
+                  </span>
+                  <div className="bg-white p-2 rounded-xl border border-line inline-block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={shop.qrisUrl}
+                      alt={`QRIS ${shop.name}`}
+                      className="max-h-40 mx-auto object-contain rounded-lg"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Tombol Aksi Nota */}

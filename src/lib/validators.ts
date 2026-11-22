@@ -7,6 +7,8 @@ import type {
   DiscountTier,
   ShopAnalyticsSummary,
   TopItemAnalytics,
+  RentalBundle,
+  DeliveryMode,
 } from '../types/index.ts';
 
 // =========================================================
@@ -283,8 +285,35 @@ export function addDaysToIsoDate(startDateIso: string, durationDays: number): st
 
 export interface CalculatedCartSummary {
   selectedList: (RentalItem & { qty: number; subtotal: number })[];
+  selectedBundles: (RentalBundle & { qty: number; subtotal: number })[];
   totalUnits: number;
   totalCost: number;
+}
+
+/**
+ * Menghitung sisa kuota paket bundling berdasarkan sisa stok fisik seluruh unit penyusunnya.
+ */
+export function computeBundleAvailability(
+  bundle: RentalBundle,
+  items: RentalItem[],
+  availabilityMap?: Record<string, number>
+): number {
+  if (!bundle.lines || bundle.lines.length === 0) return 0;
+  let minBundles = Infinity;
+  for (const line of bundle.lines) {
+    if (line.qty <= 0) continue;
+    const item = items.find((i) => i.id === line.itemId);
+    if (!item || item.status !== 'available') return 0;
+    const avail =
+      availabilityMap && typeof availabilityMap[item.id] === 'number'
+        ? availabilityMap[item.id]
+        : item.stock;
+    const possible = Math.floor(Math.max(0, avail) / line.qty);
+    if (possible < minBundles) {
+      minBundles = possible;
+    }
+  }
+  return Number.isFinite(minBundles) ? minBundles : 0;
 }
 
 /**
@@ -335,9 +364,12 @@ export function calculateCartSummary(
   items: RentalItem[],
   durationOption: DurationOption,
   availabilityMap?: Record<string, number>,
-  discountTiers?: DiscountTier[] | null
+  discountTiers?: DiscountTier[] | null,
+  bundleCart?: Record<string, number>,
+  bundles?: RentalBundle[]
 ): CalculatedCartSummary {
   const selectedList: (RentalItem & { qty: number; subtotal: number })[] = [];
+  const selectedBundles: (RentalBundle & { qty: number; subtotal: number })[] = [];
   let totalUnits = 0;
   let totalCost = 0;
   const effectiveMultiplier = getDurationMultiplier(durationOption.days, discountTiers);
@@ -365,7 +397,25 @@ export function calculateCartSummary(
     totalCost += subtotal;
   });
 
-  return { selectedList, totalUnits, totalCost };
+  if (bundleCart && bundles && bundles.length > 0) {
+    Object.entries(bundleCart).forEach(([bundleId, qty]) => {
+      const bnd = bundles.find((b) => b.id === bundleId);
+      if (!bnd || qty <= 0) return;
+      const maxBundleAvail = computeBundleAvailability(bnd, items, availabilityMap);
+      if (maxBundleAvail <= 0) return;
+      const validQty = Math.min(qty, maxBundleAvail);
+      const subtotal = Math.round(bnd.pricePerDay * effectiveMultiplier * validQty);
+      selectedBundles.push({
+        ...bnd,
+        qty: validQty,
+        subtotal,
+      });
+      totalUnits += validQty;
+      totalCost += subtotal;
+    });
+  }
+
+  return { selectedList, selectedBundles, totalUnits, totalCost };
 }
 
 export function buildWhatsappCheckoutMessage(params: {
@@ -378,6 +428,8 @@ export function buildWhatsappCheckoutMessage(params: {
   cartSummary: CalculatedCartSummary;
   notes?: string;
   trackingUrl?: string;
+  pickupTime?: string;
+  deliveryMode?: DeliveryMode;
 }): string {
   const {
     shopName,
@@ -389,17 +441,33 @@ export function buildWhatsappCheckoutMessage(params: {
     cartSummary,
     notes,
     trackingUrl,
+    pickupTime,
+    deliveryMode,
   } = params;
 
-  if (cartSummary.selectedList.length === 0) return '';
+  if (
+    cartSummary.selectedList.length === 0 &&
+    cartSummary.selectedBundles.length === 0
+  ) {
+    return '';
+  }
 
-  const lines = cartSummary.selectedList
-    .map((it, idx) => `${idx + 1}. *${it.name}* (${it.qty} unit) = ${formatRp(it.subtotal)}`)
-    .join('\n');
+  const unitLines = cartSummary.selectedList.map(
+    (it, idx) => `${idx + 1}. *${it.name}* (${it.qty} unit) = ${formatRp(it.subtotal)}`
+  );
+  const bundleLines = cartSummary.selectedBundles.map(
+    (bnd, idx) =>
+      `${unitLines.length + idx + 1}. 🎁 *Paket ${bnd.name}* (${bnd.qty} paket) = ${formatRp(bnd.subtotal)}`
+  );
+  const lines = [...unitLines, ...bundleLines].join('\n');
 
   const codeLine = bookingCode ? `🔖 *Kode Booking:* ${bookingCode}\n` : '';
   const customerLine = customerName?.trim() ? `👤 *Penyewa:* ${customerName.trim()}\n` : '';
   const dateRange = endDate && endDate !== startDate ? `${startDate} s/d ${endDate}` : startDate;
+  const pickupLine = pickupTime ? `⏰ *Jam Ambil:* ${pickupTime}\n` : '';
+  const deliveryLine = deliveryMode
+    ? `🚚 *Pengambilan:* ${deliveryMode === 'delivery' ? 'Minta Diantar Kurir' : 'Ambil di Toko'}\n`
+    : '';
   const noteLine = notes?.trim() ? `\n📝 *Catatan:* ${notes.trim()}\n` : '';
   const trackingLine = trackingUrl?.trim()
     ? `🔗 *Cek Status & Nota Booking:* ${trackingUrl.trim()}\n`
@@ -410,8 +478,10 @@ export function buildWhatsappCheckoutMessage(params: {
     codeLine +
     customerLine +
     `📅 *Jadwal Sewa:* ${dateRange}\n` +
-    `⏳ *Durasi Paket:* ${durationLabel}\n\n` +
-    `📦 *Rincian Unit:*\n${lines}\n` +
+    `⏳ *Durasi Paket:* ${durationLabel}\n` +
+    pickupLine +
+    deliveryLine +
+    `\n📦 *Rincian Unit:*\n${lines}\n` +
     noteLine +
     `\n💰 *Total Estimasi:* ${formatRp(cartSummary.totalCost)}\n` +
     trackingLine +

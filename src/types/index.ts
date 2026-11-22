@@ -3,6 +3,9 @@ export type ViewMode = 'saas_home' | 'catalog' | 'workspace';
 export type WorkspaceTab = 'inventory' | 'bookings' | 'analytics' | 'logs' | 'settings';
 export type ItemStatus = 'available' | 'rented' | 'maintenance';
 export type BookingStatus = 'pending' | 'confirmed' | 'picked_up' | 'returned' | 'cancelled';
+export type DeliveryMode = 'pickup' | 'delivery';
+export type PaymentStatus = 'unpaid' | 'dp' | 'paid';
+export type BookingSource = 'catalog' | 'walkin';
 
 export interface TopItemAnalytics {
   itemId: string;
@@ -29,6 +32,19 @@ export interface DiscountTier {
   discountPercent: number;
 }
 
+export interface BundleLine {
+  itemId: string;
+  qty: number;
+}
+
+export interface RentalBundle {
+  id: string;
+  name: string;
+  description: string;
+  pricePerDay: number;
+  lines: BundleLine[];
+}
+
 export interface Shop {
   slug: string;
   name: string;
@@ -44,6 +60,9 @@ export interface Shop {
   billingCycle?: 'monthly' | 'yearly' | null;
   terms: string[];
   discountTiers?: DiscountTier[];
+  qrisUrl?: string;
+  notifyTelegramChatId?: string;
+  bundles?: RentalBundle[];
   partnerShop?: {
     name: string;
     slug: string;
@@ -131,6 +150,12 @@ export interface Booking {
   status: BookingStatus;
   totalAmount: number;
   notes: string;
+  pickupTime?: string;
+  deliveryMode?: DeliveryMode;
+  paymentStatus?: PaymentStatus;
+  dpAmount?: number;
+  collateral?: string;
+  source?: BookingSource;
   createdAt: string;
   lines?: BookingLine[];
 }
