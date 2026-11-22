@@ -15,6 +15,7 @@ import {
   maskCustomerPhone,
   computeShopAnalytics,
   buildBookingsCsv,
+  buildPlatformShopsCsv,
   resolveEffectiveRole,
   sanitizeItemForRole,
   buildWhatsappCheckoutMessage,
@@ -450,6 +451,28 @@ describe('Validasi Skema Zod & Keamanan Data Mapper', () => {
     assert.ok(waText.includes('Paket Camping Hemat'));
     assert.ok(waText.includes('14:00'));
     assert.ok(waText.includes('Diantar Kurir'));
+
+    const adminCsv = buildPlatformShopsCsv([
+      {
+        slug: 'diecast',
+        name: 'Diecast Garage',
+        location: 'Jakarta',
+        whatsapp: '628123456789',
+        plan: 'PRO',
+        is_verified: true,
+        pro_expires_at: null,
+        billing_cycle: 'monthly',
+        created_at: '2026-11-22T00:00:00Z',
+        has_qris: true,
+        has_telegram: true,
+        item_count: 12,
+        booking_count: 5,
+        gmv: 500000,
+        member_count: 2,
+      },
+    ]);
+    assert.ok(adminCsv.includes('Slug,Nama Toko,Lokasi'));
+    assert.ok(adminCsv.includes('Diecast Garage'));
   });
 
   it('P0-3: sanitizeItemForRole menyembunyikan renterNote dari role customer tetapi tetap utuh bagi owner/staff', () => {

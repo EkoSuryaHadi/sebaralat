@@ -27,6 +27,55 @@ export interface ShopAnalyticsSummary {
   topItems: TopItemAnalytics[];
 }
 
+export interface PlatformShopAnalyticsRow {
+  slug: string;
+  name: string;
+  location: string;
+  whatsapp: string;
+  plan: 'FREE' | 'PRO';
+  is_verified: boolean;
+  pro_expires_at: string | null;
+  billing_cycle: string | null;
+  created_at: string;
+  has_qris: boolean;
+  has_telegram: boolean;
+  item_count: number;
+  booking_count: number;
+  gmv: number;
+  member_count: number;
+}
+
+export interface PlatformAnalyticsPayload {
+  summary: {
+    total_shops: number;
+    pro_shops: number;
+    free_shops: number;
+    verified_shops: number;
+    qris_adopted_shops: number;
+    telegram_adopted_shops: number;
+    total_items: number;
+    total_bookings: number;
+    walkin_bookings: number;
+    confirmed_bookings: number;
+    total_gmv: number;
+    pending_gmv: number;
+    total_members: number;
+  };
+  shops: PlatformShopAnalyticsRow[];
+  recent_bookings: {
+    id: string;
+    shop_slug: string;
+    shop_name: string;
+    code: string;
+    customer_name: string;
+    total_amount: number;
+    status: BookingStatus;
+    source: BookingSource;
+    payment_status: PaymentStatus;
+    created_at: string;
+  }[];
+}
+
 export interface DiscountTier {
   minDays: number;
   discountPercent: number;

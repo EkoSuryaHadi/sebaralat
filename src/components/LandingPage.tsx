@@ -20,9 +20,13 @@ import {
   BadgeCheck,
   ChevronDown,
   Lock,
+  MessageCircle,
+  Clock,
 } from 'lucide-react';
 import { Shop } from '../types';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { isDemoShopSlug, SEBARALA_ADMIN_WA } from '../lib/validators';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 export interface NewShopFormState {
   name: string;
@@ -52,6 +56,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   userEmail,
 }) => {
   const [openFaq, setOpenFaq] = useState(0);
+  const demoShops = shops.filter((s) => isDemoShopSlug(s.slug));
 
   return (
     <div className="min-h-screen bg-bg text-fg">
@@ -241,6 +246,74 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* COCOK UNTUK BERBAGAI JENIS RENTAL & CARA KERJA 3 LANGKAH */}
+      <section className="py-10 sm:py-14 border-y border-line bg-surface-2/40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
+          <div className="text-center space-y-3">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-accent-text">
+              Fleksibel untuk Semua Niche Bisnis Sewa
+            </span>
+            <h2 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl text-fg">
+              Cocok untuk Berbagai Jenis Usaha Rental
+            </h2>
+            <div className="flex items-center justify-center flex-wrap gap-2 pt-1">
+              {[
+                '📷 Kamera & Lensa',
+                '⛺ Camping & Outdoor',
+                '🛠️ Alat Teknik & Proyek',
+                '🎤 Sound System & Event',
+                '👗 Kebaya, Jas & Kostum',
+                '🍼 Perlengkapan Bayi',
+                '🎮 PS5, Console & Hobi/Diecast',
+              ].map((niche) => (
+                <span
+                  key={niche}
+                  className="chip bg-surface border-line text-fg-soft text-xs font-semibold py-1.5 px-3"
+                >
+                  {niche}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+            <div className="bento p-5 space-y-2">
+              <span className="chip bg-accent-soft text-accent-text border-accent/30 text-[10px] font-extrabold">
+                Langkah 1
+              </span>
+              <h3 className="font-display text-base font-extrabold text-fg">
+                Buat Katalog &amp; Input Unit
+              </h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Daftar 30 detik, unggah foto unit, tentukan tarif harian &amp; aturan diskon durasi sesuai kebijakan toko Anda sendiri.
+              </p>
+            </div>
+            <div className="bento p-5 space-y-2">
+              <span className="chip bg-accent-soft text-accent-text border-accent/30 text-[10px] font-extrabold">
+                Langkah 2
+              </span>
+              <h3 className="font-display text-base font-extrabold text-fg">
+                Pasang Link di Bio IG &amp; WA
+              </h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Bagikan tautan resmi <span className="font-mono text-accent-text">sebaraja.my.id/toko-anda</span> atau tempel stiker QR di bodi alat fisik.
+              </p>
+            </div>
+            <div className="bento p-5 space-y-2">
+              <span className="chip bg-accent-soft text-accent-text border-accent/30 text-[10px] font-extrabold">
+                Langkah 3
+              </span>
+              <h3 className="font-display text-base font-extrabold text-fg">
+                Terima Booking, Nota &amp; Pantau Omzet
+              </h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Pelanggan pilih tanggal &amp; kirim order ke WA + link tiket nota. Anda pantau DP, sewa walk-in, dan omzet dari satu panel.
+              </p>
             </div>
           </div>
         </div>
@@ -485,23 +558,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <ul className="space-y-2.5 text-xs text-fg-soft">
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-accent-text shrink-0" />
-                    <span><strong>Unlimited</strong> unit alat &amp; kategori sewa</span>
+                    <span><strong>Unlimited</strong> unit alat &amp; <strong>Paket Bundling Hemat</strong></span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-accent-text shrink-0" />
-                    <span><strong>Akses Multi-Role:</strong> Login Email Magic Link / OTP untuk Staf &amp; Owner</span>
+                    <span><strong>Laporan Omzet, Alat Terlaris &amp; Ekspor CSV</strong></span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-accent-text shrink-0" />
-                    <span><strong>Generator Label QR Fisik</strong> siap cetak untuk bodi unit</span>
+                    <span><strong>Cek Booking Publik, Cetak Nota &amp; Upload QRIS Toko</strong></span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-accent-text shrink-0" />
-                    <span><strong>Audit Trail Log:</strong> Pantau jam berapa staf mengubah stok</span>
+                    <span><strong>Notifikasi Order Masuk Real-Time ke Telegram Owner</strong></span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-accent-text shrink-0" />
-                    <span>Lencana <strong>Official Partner</strong> &amp; Bebas Watermark</span>
+                    <span><strong>Akses Multi-Role &amp; Audit Log:</strong> Login Email OTP Staf &amp; Owner</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-accent-text shrink-0" />
+                    <span><strong>Generator Label QR Fisik</strong>, Lencana Partner &amp; Bebas Watermark</span>
                   </li>
                 </ul>
               </div>
@@ -510,7 +587,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 href="#daftar-toko"
                 className="btn-brutal btn-brutal-accent w-full py-3 text-xs"
               >
-                Buka Toko PRO (Uji Coba Gratis)
+                Mulai Gratis, Upgrade PRO Kapan Saja
               </a>
             </div>
           </div>
@@ -574,7 +651,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-fg-soft mb-1.5">
                     Nomor WhatsApp Admin *
@@ -592,7 +669,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-fg-soft mb-1.5">
-                    Kota / Alamat Singkat
+                    Kota / Alamat Singkat *
                   </label>
                   <input
                     type="text"
@@ -604,6 +681,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     }
                     className="field"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-fg-soft mb-1.5">
+                    Jam Operasional *
+                  </label>
+                  <div className="relative">
+                    <Clock className="w-3.5 h-3.5 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="08.00 - 21.00 WIB"
+                      value={newShopForm.hours}
+                      onChange={(e) =>
+                        setNewShopForm({ ...newShopForm, hours: e.target.value })
+                      }
+                      className="field pl-8"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -617,7 +712,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="text-[11px] text-muted">
                     {userEmail
                       ? 'Toko baru akan langsung terikat ke akun email Anda.'
-                      : 'Sudah punya akun? Masuk untuk mengelola atau mengklaim toko Anda.'}
+                      : 'Data form otomatis tersimpan sementara jika Anda perlu login email terlebih dahulu.'}
                   </span>
                 </div>
                 {!userEmail && (
@@ -636,7 +731,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 className="btn-brutal w-full py-3.5 text-xs sm:text-sm"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>Luncurkan Katalog &amp; Masuk sebagai Owner</span>
+                <span>
+                  {!userEmail && isSupabaseConfigured
+                    ? 'Masuk Email & Luncurkan Katalog'
+                    : 'Luncurkan Katalog & Masuk sebagai Owner'}
+                </span>
               </button>
             </form>
           </div>
@@ -650,13 +749,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     Live Showcase
                   </span>
                   <h3 className="font-display text-lg font-extrabold tracking-tight text-fg">
-                    Klik untuk Mencoba Katalog Mitra ({shops.length})
+                    Klik untuk Mencoba Katalog Demo ({demoShops.length})
                   </h3>
                 </div>
               </div>
 
               <div className="space-y-2.5">
-                {shops.map((s) => (
+                {demoShops.map((s) => (
                   <div
                     key={s.slug}
                     onClick={() => onSelectShop(s.slug)}
@@ -698,8 +797,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     a: 'Pengelola dapat masuk melalui halaman Login (/login) atau tombol pengelola di katalog. Hak akses diverifikasi aman via Supabase Auth (Magic Link & OTP email) sesuai peran Owner atau Staf Gudang.'
                   },
                   {
-                    q: 'Apakah ada potongan komisi dari transaksi sewa?',
-                    a: 'Rp 0 (Bebas komisi). Seluruh pembayaran sewa dilakukan langsung antara penyewa dan rekening/QRIS toko Anda.'
+                    q: 'Apakah uang sewa & DP masuk ke Sebaraja dulu? Ada komisi?',
+                    a: 'Rp 0 (Bebas komisi). Seluruh pembayaran sewa & DP ditransfer langsung ke rekening atau QRIS toko Anda sendiri yang dapat diunggah di Pengaturan Toko.'
+                  },
+                  {
+                    q: 'Bagaimana jika ada penyewa yang datang langsung ke toko (Walk-in)?',
+                    a: 'Staf atau Owner cukup menekan tombol "+ Catat Sewa Walk-in" di Panel Kerja. Transaksi otomatis berstatus Picked Up, memotong stok kalender, mencetak nota, dan masuk ke laporan Omzet.'
+                  },
+                  {
+                    q: 'Apakah diskon sewa mingguan bisa diatur sendiri atau dinonaktifkan?',
+                    a: 'Ya! Di Pengaturan Toko, Owner dapat mengatur persentase diskon berdasarkan minimal hari sewa (atau menghapus seluruh tier diskon jika ingin memakai tarif harian murni).'
+                  },
+                  {
+                    q: 'Bagaimana jika staf gudang resign?',
+                    a: 'Owner dapat mencabut akses staf kapan saja dengan 1 klik ("Cabut Akses") pada daftar Anggota Tim di Tab Profil.'
                   }
                 ].map((item, idx) => (
                   <div
@@ -740,7 +851,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <Image src="/logo-dark.svg" alt="Sebaraja" width={120} height={30} className="h-6 w-auto object-contain hidden dark:block" />
             <span className="font-bold text-fg-soft">Sebaraja Indonesia</span>
           </div>
-          <p>© 2026 Sebaraja SaaS. Solusi Katalog Instan UMKM &amp; B2B Rental.</p>
+          <div className="flex items-center gap-3 flex-wrap justify-center">
+            <p>© 2026 Sebaraja SaaS. Solusi Katalog Instan UMKM &amp; B2B Rental.</p>
+            <a
+              href={`https://wa.me/${SEBARALA_ADMIN_WA}?text=${encodeURIComponent(
+                'Halo Tim Sebaraja, saya ingin berkonsultasi mengenai katalog rental untuk usaha saya.'
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-glass px-3 py-1.5 text-[11px] font-bold text-accent-text inline-flex items-center gap-1.5"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>Konsultasi via WA</span>
+            </a>
+          </div>
         </div>
       </footer>
     </div>

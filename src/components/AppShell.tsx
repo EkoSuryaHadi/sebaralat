@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useSyncExternalStore } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sparkles, AlertTriangle, ArrowLeft } from 'lucide-react';
 import {
   RentalItem,
@@ -31,6 +32,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useShopData } from '@/hooks/useShopData';
 import { RoleBar } from '@/components/RoleBar';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { LandingPage, NewShopFormState } from '@/components/LandingPage';
 import { CatalogView } from '@/components/CatalogView';
 import { WorkspaceView } from '@/components/WorkspaceView';
@@ -48,6 +50,7 @@ export interface AppShellProps {
 }
 
 export function AppShell({ initialShopSlug }: AppShellProps) {
+  const router = useRouter();
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -177,13 +180,27 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     imageUrl: '',
   });
 
-  const [newShopForm, setNewShopForm] = useState<NewShopFormState>({
-    name: '',
-    tagline: '',
-    slug: '',
-    whatsapp: '628',
-    location: 'Balikpapan',
-    hours: '08.00 - 21.00 WITA',
+  const [newShopForm, setNewShopForm] = useState<NewShopFormState>(() => {
+    const defaultDraft: NewShopFormState = {
+      name: '',
+      tagline: '',
+      slug: '',
+      whatsapp: '628',
+      location: 'Balikpapan',
+      hours: '08.00 - 21.00 WIB',
+    };
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = window.sessionStorage?.getItem('sebaraja_draft_shop_form');
+        if (saved) {
+          const parsed = JSON.parse(saved) as Partial<NewShopFormState>;
+          return { ...defaultDraft, ...parsed };
+        }
+      } catch {
+        // Abaikan jika JSON tidak valid
+      }
+    }
+    return defaultDraft;
   });
 
   // Sinkronisasi navigasi URL dengan pushState & popstate
@@ -666,8 +683,28 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
       return;
     }
 
+    if (isSupabaseConfigured && !user) {
+      if (typeof window !== 'undefined') {
+        try {
+          window.sessionStorage?.setItem(
+            'sebaraja_draft_shop_form',
+            JSON.stringify(newShopForm)
+          );
+        } catch {
+          // Abaikan error storage
+        }
+        triggerToast('Simpan sementara! Silakan login dengan email untuk meluncurkan toko Anda.');
+        router.push('/login?redirect=/#daftar-toko');
+      }
+      return;
+    }
+
     const createdShop = await createShopAtomically(parsed.data);
     if (!createdShop) return;
+
+    if (typeof window !== 'undefined') {
+      window.sessionStorage?.removeItem('sebaraja_draft_shop_form');
+    }
 
     await refreshMemberships();
     setDevSimulatedRole('owner');

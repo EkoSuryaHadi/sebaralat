@@ -9,6 +9,7 @@ import type {
   TopItemAnalytics,
   RentalBundle,
   DeliveryMode,
+  PlatformShopAnalyticsRow,
 } from '../types/index.ts';
 
 // =========================================================
@@ -647,6 +648,55 @@ export function buildBookingsCsv(bookings: Booking[]): string {
       escapeCsvCell(bk.notes),
     ].join(',');
   });
+
+  return [headers.join(','), ...rows].join('\n');
+}
+
+/**
+ * Menghasilkan file CSV daftar seluruh mitra toko dan performa GMV untuk Super Admin Sebaraja.
+ */
+export function buildPlatformShopsCsv(shops: PlatformShopAnalyticsRow[]): string {
+  const escapeCsvCell = (val: string | number | boolean | null | undefined): string => {
+    const str = String(val ?? '');
+    if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const headers = [
+    'Slug',
+    'Nama Toko',
+    'Lokasi',
+    'WhatsApp',
+    'Paket',
+    'Verified',
+    'Jumlah Unit',
+    'Jumlah Booking',
+    'Total GMV (Rp)',
+    'Anggota Tim',
+    'QRIS Aktif',
+    'Telegram Alert',
+    'Tanggal Daftar',
+  ];
+
+  const rows = shops.map((s) =>
+    [
+      escapeCsvCell(s.slug),
+      escapeCsvCell(s.name),
+      escapeCsvCell(s.location),
+      escapeCsvCell(s.whatsapp),
+      escapeCsvCell(s.plan),
+      escapeCsvCell(s.is_verified ? 'Ya' : 'Tidak'),
+      escapeCsvCell(s.item_count),
+      escapeCsvCell(s.booking_count),
+      escapeCsvCell(s.gmv),
+      escapeCsvCell(s.member_count),
+      escapeCsvCell(s.has_qris ? 'Ya' : 'Tidak'),
+      escapeCsvCell(s.has_telegram ? 'Ya' : 'Tidak'),
+      escapeCsvCell(s.created_at),
+    ].join(',')
+  );
 
   return [headers.join(','), ...rows].join('\n');
 }
