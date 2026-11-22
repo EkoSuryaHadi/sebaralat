@@ -33,6 +33,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useShopData } from '@/hooks/useShopData';
 import { RoleBar } from '@/components/RoleBar';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { trackAnalyticsEvent } from '@/lib/analytics';
 import { LandingPage, NewShopFormState } from '@/components/LandingPage';
 import { CatalogView } from '@/components/CatalogView';
 import { WorkspaceView } from '@/components/WorkspaceView';
@@ -300,6 +301,14 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   }, [items]);
 
   const updateCartQty = (itemId: string, delta: number, maxStock: number) => {
+    const currentBefore = cart[itemId] || 0;
+    if (delta > 0 && currentBefore === 0 && maxStock > 0 && shop) {
+      void trackAnalyticsEvent({
+        eventType: 'add_to_cart',
+        path: `/${shop.slug}`,
+        shopSlug: shop.slug,
+      });
+    }
     setCart((prev) => {
       const currentQty = prev[itemId] || 0;
       const nextQty = currentQty + delta;
@@ -317,6 +326,14 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
   };
 
   const updateBundleCartQty = (bundleId: string, delta: number, maxAvail: number) => {
+    const currentBefore = bundleCart[bundleId] || 0;
+    if (delta > 0 && currentBefore === 0 && maxAvail > 0 && shop) {
+      void trackAnalyticsEvent({
+        eventType: 'add_to_cart',
+        path: `/${shop.slug}`,
+        shopSlug: shop.slug,
+      });
+    }
     setBundleCart((prev) => {
       const currentQty = prev[bundleId] || 0;
       const nextQty = currentQty + delta;
@@ -445,6 +462,11 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     setShowWaPreviewModal(false);
     setCart({});
     setBundleCart({});
+    void trackAnalyticsEvent({
+      eventType: 'booking_created',
+      path: `/${shop.slug}`,
+      shopSlug: shop.slug,
+    });
     triggerToast(`Kode Booking ${booking.code} berhasil dibuat!`);
     handleOpenWhatsApp(msgWithCode);
   };
@@ -702,6 +724,12 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
     const createdShop = await createShopAtomically(parsed.data);
     if (!createdShop) return;
 
+    void trackAnalyticsEvent({
+      eventType: 'shop_created',
+      path: '/',
+      shopSlug: createdShop.slug,
+    });
+
     if (typeof window !== 'undefined') {
       window.sessionStorage?.removeItem('sebaraja_draft_shop_form');
     }
@@ -904,7 +932,16 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
               onUpdateBundleCartQty={updateBundleCartQty}
               onOpenWhatsApp={handleOpenWhatsApp}
               cartSummary={cartSummary}
-              onOpenCheckoutModal={() => setShowWaPreviewModal(true)}
+              onOpenCheckoutModal={() => {
+                if (shop) {
+                  void trackAnalyticsEvent({
+                    eventType: 'wa_checkout_click',
+                    path: `/${shop.slug}`,
+                    shopSlug: shop.slug,
+                  });
+                }
+                setShowWaPreviewModal(true);
+              }}
               onOpenAuthModal={() => setShowAuthModal(true)}
               onOpenWorkspace={() => setViewMode('workspace')}
               onSelectShop={(slug) => {
@@ -921,7 +958,16 @@ export function AppShell({ initialShopSlug }: AppShellProps) {
                   window.history.replaceState({}, '', `/${shop.slug}`);
                 }
               }}
-              onSelectItemDetail={(item) => setDetailItem(item)}
+              onSelectItemDetail={(item) => {
+                if (shop) {
+                  void trackAnalyticsEvent({
+                    eventType: 'item_detail_view',
+                    path: `/${shop.slug}`,
+                    shopSlug: shop.slug,
+                  });
+                }
+                setDetailItem(item);
+              }}
               onOpenBookingLookup={() => {
                 setSelectedReceiptBooking(null);
                 setLookupInitialCode(urlBookingParam || '');

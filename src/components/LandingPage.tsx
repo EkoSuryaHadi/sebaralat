@@ -27,6 +27,7 @@ import { Shop } from '../types';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { isDemoShopSlug, SEBARALA_ADMIN_WA } from '../lib/validators';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { trackAnalyticsEvent } from '@/lib/analytics';
 
 export interface NewShopFormState {
   name: string;
@@ -621,6 +622,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   required
                   placeholder="Contoh: Samarinda Kamera & Multimedia"
                   value={newShopForm.name}
+                  onFocus={() => {
+                    void trackAnalyticsEvent({ eventType: 'shop_signup_started', path: '/' });
+                  }}
                   onChange={(e) => {
                     const nameVal = e.target.value;
                     const autoSlug = nameVal

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/lib/__tests__/validators.test.ts src/lib/__tests__/plan_limits.test.ts src/lib/__tests__/telegram.test.ts",
+    "test": "node --test src/lib/__tests__/validators.test.ts src/lib/__tests__/plan_limits.test.ts src/lib/__tests__/telegram.test.ts src/lib/__tests__/analytics.test.ts",
     "notify:test": "node --env-file-if-exists=.env.local scripts/test-telegram.ts"
   },
   "dependencies": {

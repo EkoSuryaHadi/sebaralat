@@ -43,6 +43,56 @@ export interface PlatformShopAnalyticsRow {
   booking_count: number;
   gmv: number;
   member_count: number;
+  views_period?: number;
+  wa_clicks_period?: number;
+}
+
+export interface PlatformTrafficDailyPoint {
+  date: string;
+  label: string;
+  views: number;
+  unique_visitors: number;
+  catalog_views: number;
+  wa_clicks: number;
+}
+
+export interface PlatformTrafficSourceRow {
+  source: string;
+  views: number;
+  unique_visitors: number;
+}
+
+export interface PlatformTrafficDeviceRow {
+  device: 'mobile' | 'tablet' | 'desktop';
+  views: number;
+  unique_visitors: number;
+}
+
+export interface PlatformTrafficPageRow {
+  path: string;
+  shop_slug: string | null;
+  views: number;
+  unique_visitors: number;
+}
+
+export interface PlatformTrafficSummary {
+  period_days: number;
+  total_page_views: number;
+  unique_visitors: number;
+  today_views: number;
+  today_unique_visitors: number;
+  landing_views: number;
+  catalog_views: number;
+  item_detail_views: number;
+  add_to_carts: number;
+  wa_checkout_clicks: number;
+  booking_created_events: number;
+  shop_signup_started: number;
+  shop_created_events: number;
+  daily_series: PlatformTrafficDailyPoint[];
+  top_referrers: PlatformTrafficSourceRow[];
+  device_breakdown: PlatformTrafficDeviceRow[];
+  top_pages: PlatformTrafficPageRow[];
 }
 
 export interface PlatformAnalyticsPayload {
@@ -74,6 +124,7 @@ export interface PlatformAnalyticsPayload {
     payment_status: PaymentStatus;
     created_at: string;
   }[];
+  traffic?: PlatformTrafficSummary;
 }
 
 export interface DiscountTier {
