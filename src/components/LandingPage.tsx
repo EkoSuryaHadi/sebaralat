@@ -188,6 +188,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <p className="text-[11px] text-muted leading-snug">Checkout Tanpa Komisi</p>
               </div>
             </div>
+
+            <p className="text-[11px] sm:text-xs text-muted flex items-center gap-1.5 flex-wrap">
+              <CheckCircle2 className="w-3.5 h-3.5 text-accent-text shrink-0" />
+              <span>
+                Siap pakai untuk rental <strong className="text-fg-soft">Kamera &amp; Lensa</strong>,{' '}
+                <strong className="text-fg-soft">Outdoor &amp; Camping</strong>,{' '}
+                <strong className="text-fg-soft">Genset &amp; Proyek</strong>, hingga{' '}
+                <strong className="text-fg-soft">Sound &amp; Event</strong>.
+              </span>
+            </p>
           </div>
 
           {/* PREVIEW MOCKUP INTERAKTIF DI KANAN HERO */}
@@ -214,9 +224,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <span className="text-[10px] font-extrabold text-accent-text uppercase">
                       🟢 TERSEDIA HARI INI (4 UNIT)
                     </span>
-                    <h3 className="text-sm font-bold text-fg mt-0.5">
+                    <p className="text-sm font-bold text-fg mt-0.5">
                       Tenda Eiger Kapasitas 4-5 Orang
-                    </h3>
+                    </p>
                     <p className="text-xs text-muted">Rp55.000 / hari • Double Layer</p>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-accent-soft border border-accent/30 flex items-center justify-center shrink-0">
@@ -229,9 +239,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <span className="text-[10px] font-extrabold text-danger-text uppercase">
                       🔴 SEDANG DISEWA
                     </span>
-                    <h4 className="text-xs font-bold text-fg">
+                    <p className="text-xs font-bold text-fg">
                       Genset Silent Inverter 2200W
-                    </h4>
+                    </p>
                     <p className="text-[11px] text-danger-text">
                       ⏰ Ready kembali: Minggu, 14:00 WITA
                     </p>
@@ -848,7 +858,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* FOOTER */}
-      <footer className="px-3 sm:px-6 pb-6 text-xs text-muted">
+      <footer className="px-3 sm:px-6 pb-24 md:pb-6 text-xs text-muted">
         <div className="bento max-w-6xl mx-auto px-5 py-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex items-center gap-2">
             <Image src="/logo.svg" alt="Sebaraja" width={120} height={30} className="h-6 w-auto object-contain dark:hidden" />
@@ -871,6 +881,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
       </footer>
+
+      {/* STICKY MOBILE CTA */}
+      <div className="fixed bottom-3 inset-x-3 z-30 md:hidden">
+        <div className="glass-strong rounded-2xl p-2 flex items-center gap-2 shadow-xl border border-line-strong">
+          <button
+            type="button"
+            onClick={() => onSelectShop('borneo-rental')}
+            className="btn-glass px-3.5 py-2.5 text-xs font-bold shrink-0"
+          >
+            <Eye className="w-3.5 h-3.5 text-accent-text" />
+            <span>Demo</span>
+          </button>
+          <a
+            href="#daftar-toko"
+            className="btn-brutal flex-1 py-2.5 px-4 text-xs justify-center"
+          >
+            <span>Buat Katalog Gratis</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
     </div>
   );
 };

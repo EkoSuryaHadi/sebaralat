@@ -41,9 +41,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const shop = await resolveShopMeta(slug);
 
   if (shop) {
+    const title = `${shop.name} - Katalog Sewa & Rental Resmi`;
+    const description = `${shop.tagline || 'Cek ketersediaan unit secara real-time'}. Cek stok kalender dan sewa langsung via WhatsApp.`;
     return {
-      title: `${shop.name} - Katalog Sewa & Rental Resmi`,
-      description: `${shop.tagline}. Cek stok ketersediaan unit dan sewa langsung via WhatsApp.`,
+      title,
+      description,
+      alternates: {
+        canonical: `/${slug}`,
+      },
+      openGraph: {
+        title,
+        description,
+        url: `/${slug}`,
+        type: 'website',
+      },
     };
   }
 

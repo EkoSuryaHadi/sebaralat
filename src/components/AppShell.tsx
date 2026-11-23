@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useSyncExternalStore } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Sparkles, AlertTriangle, ArrowLeft } from 'lucide-react';
 import {
@@ -35,16 +36,48 @@ import { RoleBar } from '@/components/RoleBar';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { trackAnalyticsEvent } from '@/lib/analytics';
 import { LandingPage, NewShopFormState } from '@/components/LandingPage';
-import { CatalogView } from '@/components/CatalogView';
-import { WorkspaceView } from '@/components/WorkspaceView';
-import { AuthModal } from '@/components/AuthModal';
-import { WaPreviewModal } from '@/components/WaPreviewModal';
-import { AddItemModal, NewItemFormState } from '@/components/AddItemModal';
-import { ItemDetailModal } from '@/components/ItemDetailModal';
-import { BookingStatusModal } from '@/components/BookingStatusModal';
-import { WalkInBookingModal } from '@/components/WalkInBookingModal';
-import { QrModal } from '@/components/QrModal';
-import { UpgradeModal } from '@/components/UpgradeModal';
+import type { NewItemFormState } from '@/components/AddItemModal';
+
+const CatalogView = dynamic(
+  () => import('@/components/CatalogView').then((mod) => mod.CatalogView),
+  { ssr: false }
+);
+const WorkspaceView = dynamic(
+  () => import('@/components/WorkspaceView').then((mod) => mod.WorkspaceView),
+  { ssr: false }
+);
+const AuthModal = dynamic(
+  () => import('@/components/AuthModal').then((mod) => mod.AuthModal),
+  { ssr: false }
+);
+const WaPreviewModal = dynamic(
+  () => import('@/components/WaPreviewModal').then((mod) => mod.WaPreviewModal),
+  { ssr: false }
+);
+const AddItemModal = dynamic(
+  () => import('@/components/AddItemModal').then((mod) => mod.AddItemModal),
+  { ssr: false }
+);
+const ItemDetailModal = dynamic(
+  () => import('@/components/ItemDetailModal').then((mod) => mod.ItemDetailModal),
+  { ssr: false }
+);
+const BookingStatusModal = dynamic(
+  () => import('@/components/BookingStatusModal').then((mod) => mod.BookingStatusModal),
+  { ssr: false }
+);
+const WalkInBookingModal = dynamic(
+  () => import('@/components/WalkInBookingModal').then((mod) => mod.WalkInBookingModal),
+  { ssr: false }
+);
+const QrModal = dynamic(
+  () => import('@/components/QrModal').then((mod) => mod.QrModal),
+  { ssr: false }
+);
+const UpgradeModal = dynamic(
+  () => import('@/components/UpgradeModal').then((mod) => mod.UpgradeModal),
+  { ssr: false }
+);
 
 export interface AppShellProps {
   initialShopSlug?: string;
